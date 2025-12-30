@@ -1,14 +1,14 @@
-# [INSERT_PROJECT_NAME]
+# YMCA AI Multilingual Chatbot
 
-[INSERT_PROJECT_DESCRIPTION - 2-3 sentences describing what the project does, who it's for, and the key problem it solves]
+An intelligent document processing and multilingual chatbot system designed for YMCA organizations. This AI-powered solution processes historical documents, extracts knowledge, and provides multilingual chat support to help YMCA staff and members access information efficiently across language barriers.
 
 ---
 
 ## Visual Demo
 
-![User Interface Demo](./docs/media/user-interface.gif)
+![YMCA AI Architecture](./docs/media/arch.png)
 
-> **[PLACEHOLDER]** Please provide a GIF or screenshot of the application interface and save it as `docs/media/user-interface.gif`
+> **Architecture Overview**: The system uses AWS serverless architecture with Step Functions orchestrating document processing, Textract for OCR, Bedrock for AI capabilities, and a React frontend for user interaction.
 
 ---
 
@@ -29,17 +29,18 @@
 
 ## High Level Architecture
 
-[INSERT_ARCHITECTURE_OVERVIEW - Brief paragraph explaining the architecture, how components interact, and the overall system design]
+The YMCA AI system leverages AWS serverless architecture to create a scalable, multilingual document processing and chatbot solution. The system automatically processes uploaded documents through OCR, extracts knowledge using AI, and provides intelligent chat responses in multiple languages.
 
-![Architecture Diagram](./docs/media/architecture.png)
+Key components include document ingestion via S3, automated processing through Step Functions and Textract, knowledge storage in Bedrock Knowledge Base, and a React-based frontend for user interaction.
 
-> **[PLACEHOLDER]** Please create and provide an architecture diagram showing:
-> - All major components/services
-> - Data flow between components
-> - User interaction points
-> - External services/APIs
-> 
-> Save the diagram as `docs/media/architecture.png` (or .jpeg/.jpg)
+![Architecture Diagram](./docs/media/ymca_architecture.png)
+
+**Architecture Flow:**
+1. **Document Upload** → Users upload historical documents via the web interface
+2. **Document Processing** → Step Functions orchestrates OCR extraction via Textract
+3. **Knowledge Extraction** → Processed text is stored in Bedrock Knowledge Base
+4. **Multilingual Chat** → Users interact with the AI agent through Amazon Translate
+5. **Response Generation** → RAG system provides contextual answers from processed documents
 
 For a detailed explanation of the architecture, see the [Architecture Deep Dive](./docs/architectureDeepDive.md).
 
@@ -50,9 +51,9 @@ For a detailed explanation of the architecture, see the [Architecture Deep Dive]
 For complete deployment instructions, see the [Deployment Guide](./docs/deploymentGuide.md).
 
 **Quick Start:**
-1. [INSERT_QUICK_START_STEP_1]
-2. [INSERT_QUICK_START_STEP_2]
-3. [INSERT_QUICK_START_STEP_3]
+1. **Prerequisites**: Install Node.js 18+, AWS CLI, and AWS CDK CLI (`npm install -g aws-cdk`)
+2. **Setup**: Clone repository, run `npm install` in both backend/ and frontend/ directories
+3. **Deploy**: Configure AWS credentials, run `npm run bootstrap` then `npm run deploy` in backend/
 
 ---
 
@@ -81,11 +82,16 @@ For developers looking to extend or modify this project, see the [Modification G
 │   ├── bin/
 │   │   └── backend.ts
 │   ├── lambda/
-│   │   └── [INSERT_LAMBDA_FUNCTIONS]
+│   │   ├── batch-processor/
+│   │   ├── textract-async/
+│   │   └── textract-postprocessor/
 │   ├── lib/
 │   │   └── backend-stack.ts
-│   ├── agent/
-│   │   └── [INSERT_AGENT_FILES]
+│   ├── scripts/
+│   │   ├── deploy.sh
+│   │   └── destroy.sh
+│   ├── test/
+│   │   └── backend.test.ts
 │   ├── cdk.json
 │   ├── package.json
 │   └── tsconfig.json
@@ -95,7 +101,9 @@ For developers looking to extend or modify this project, see the [Modification G
 │   │   ├── page.tsx
 │   │   └── globals.css
 │   ├── public/
-│   └── package.json
+│   │   └── [static assets]
+│   ├── package.json
+│   └── next.config.ts
 ├── docs/
 │   ├── architectureDeepDive.md
 │   ├── deploymentGuide.md
@@ -103,26 +111,30 @@ For developers looking to extend or modify this project, see the [Modification G
 │   ├── APIDoc.md
 │   ├── modificationGuide.md
 │   └── media/
-│       ├── architecture.png
-│       └── user-interface.gif
+│       └── ymca_architecture.png
 ├── LICENSE
+├── package-lock.json
 └── README.md
 ```
 
 ### Directory Explanations:
 
 1. **backend/** - Contains all backend infrastructure and serverless functions
-   - `bin/` - CDK app entry point
-   - `lambda/` - AWS Lambda function handlers
-   - `lib/` - CDK stack definitions
-   - `agent/` - [INSERT_AGENT_DESCRIPTION]
+   - `bin/` - CDK app entry point and configuration
+   - `lambda/` - AWS Lambda function implementations for document processing
+     - `batch-processor/` - Initiates document processing workflows
+     - `textract-async/` - Starts OCR jobs for document text extraction
+     - `textract-postprocessor/` - Processes OCR results for knowledge base
+   - `lib/` - CDK stack definitions and infrastructure as code
+   - `scripts/` - Deployment and management scripts
+   - `test/` - Unit tests for backend components
 
 2. **frontend/** - Next.js frontend application
    - `app/` - Next.js App Router pages and layouts
-   - `public/` - Static assets
+   - `public/` - Static assets (images, icons, etc.)
 
-3. **docs/** - Project documentation
-   - `media/` - Images, diagrams, and GIFs for documentation
+3. **docs/** - Project documentation and architecture diagrams
+   - `media/` - Images, diagrams, and visual documentation
 
 ---
 

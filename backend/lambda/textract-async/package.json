@@ -1,0 +1,12 @@
+{
+  "name": "ymca-textract-async",
+  "version": "1.0.0",
+  "description": "YMCA AI Textract Async Lambda Function",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-textract": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "ymca-textract-postprocessor",
+  "version": "1.0.0",
+  "description": "YMCA AI Textract Postprocessor Lambda Function",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-textract": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

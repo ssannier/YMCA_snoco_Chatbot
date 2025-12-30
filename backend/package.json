@@ -8,7 +8,12 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "deploy": "./scripts/deploy.sh",
+    "destroy": "./scripts/destroy.sh",
+    "diff": "./scripts/diff.sh",
+    "synth": "cdk synth",
+    "bootstrap": "cdk bootstrap"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

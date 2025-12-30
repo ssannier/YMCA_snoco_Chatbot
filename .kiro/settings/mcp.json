@@ -1,0 +1,145 @@
+{
+  "mcpServers": {
+    "aws-api": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.aws-api-mcp-server@latest"
+      ],
+      "env": {
+        "AWS_API_MCP_WORKING_DIR": "/tmp/aws-api-mcp",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "call_aws"
+      ]
+    },
+    "aws-cdk": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.cdk-mcp-server@latest"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "GetAwsSolutionsConstructPattern"
+      ]
+    },
+    "aws-diagram": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.aws-diagram-mcp-server@latest"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "generate_diagram"
+      ]
+    },
+    "aws-docs": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.aws-documentation-mcp-server@latest"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "search_documentation",
+        "search_documentation",
+        "search_documentation",
+        "read_documentation",
+        "read_documentation",
+        "read_documentation"
+      ]
+    },
+    "aws-lambda": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.lambda-mcp-server@latest"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": []
+    },
+    "aws-pricing": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.aws-pricing-mcp-server@latest"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "get_pricing"
+      ]
+    },
+    "bedrock-kb-retrieval": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "awslabs.bedrock-kb-retrieval-mcp-server@latest"
+      ],
+      "env": {},
+      "disabled": false
+    },
+    "fetch": {
+      "command": "/Users/etloaner/.local/bin/uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "fetch"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "get_file_contents"
+      ]
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-32edcd53-d555-4034-a59e-cb15a8f92008"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cyanheads/git-mcp-server"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "git_status",
+        "git_diff"
+      ]
+    }
+  }
+}

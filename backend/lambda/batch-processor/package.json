@@ -1,0 +1,12 @@
+{
+  "name": "ymca-batch-processor",
+  "version": "1.0.0",
+  "description": "YMCA AI Batch Processor Lambda Function",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-sfn": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

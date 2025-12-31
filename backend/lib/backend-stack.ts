@@ -18,11 +18,19 @@ export class YmcaAiStack extends cdk.Stack {
     // output/ - stores processed output from textract pipeline
     const documentsBucket = new s3.Bucket(this, 'YmcaDocumentsBucket', {
       bucketName: `ymca-documents-${this.account}-${this.region}`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
     });
 
     // S3 Bucket for vector embeddings storage
     const vectorStoreBucket = new s3.Bucket(this, 'YmcaVectorStoreBucket', {
       bucketName: `ymca-vector-store-${this.account}-${this.region}`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
     });
 
     // DynamoDB Tables for analytics and conversation tracking
@@ -31,6 +39,7 @@ export class YmcaAiStack extends cdk.Stack {
       partitionKey: { name: 'conversationId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const analyticsTable = new dynamodb.Table(this, 'YmcaAnalyticsTable', {
@@ -38,9 +47,10 @@ export class YmcaAiStack extends cdk.Stack {
       partitionKey: { name: 'queryId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // IAM Role for Lambda functions
+    // IAM Role for Lambda functions (excluding batch processor)
     const lambdaExecutionRole = new iam.Role(this, 'YmcaLambdaExecutionRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       managedPolicies: [
@@ -103,15 +113,24 @@ export class YmcaAiStack extends cdk.Stack {
               ],
               resources: ['*'],
             }),
-            // Step Functions permissions
+          ],
+        }),
+      },
+    });
+
+    // Separate IAM Role for Batch Processor (will get Step Functions permissions later)
+    const batchProcessorRole = new iam.Role(this, 'YmcaBatchProcessorRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ],
+      inlinePolicies: {
+        S3Policy: new iam.PolicyDocument({
+          statements: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                'states:StartExecution',
-                'states:DescribeExecution',
-                'states:StopExecution',
-              ],
-              resources: ['*'],
+              actions: ['s3:GetObject'],
+              resources: [`${documentsBucket.bucketArn}/*`],
             }),
           ],
         }),
@@ -158,11 +177,12 @@ export class YmcaAiStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lambda/batch-processor'),
-      role: lambdaExecutionRole,
+      role: batchProcessorRole,
       timeout: cdk.Duration.minutes(5),
       memorySize: 512,
       environment: {
         DOCUMENTS_BUCKET: documentsBucket.bucketName,
+        // STEP_FUNCTION_ARN will be added after workflow creation
       },
     });
 
@@ -193,6 +213,16 @@ export class YmcaAiStack extends cdk.Stack {
       },
     });
 
+    const checkTextractStatusFunction = new lambda.Function(this, 'YmcaCheckTextractStatusFunction', {
+      functionName: 'ymca-check-textract-status',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/check-textract-status'),
+      role: lambdaExecutionRole,
+      timeout: cdk.Duration.minutes(2),
+      memorySize: 256,
+    });
+
     // API Gateway for REST API
     const api = new apigateway.RestApi(this, 'YmcaAiApi', {
       restApiName: 'YMCA AI API',
@@ -209,24 +239,6 @@ export class YmcaAiStack extends cdk.Stack {
         ],
       },
     });
-
-    // Step Functions workflow for document processing pipeline
-    const documentProcessingWorkflow = this.createDocumentProcessingWorkflow(
-      batchProcessorFunction,
-      textractAsyncFunction,
-      textractPostprocessorFunction
-    );
-
-    // S3 event notification to trigger document processing workflow
-    documentsBucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      new s3Notifications.LambdaDestination(batchProcessorFunction),
-      { prefix: 'input/' }
-    );
-
-    // Update batch processor to trigger Step Functions
-    batchProcessorFunction.addEnvironment('STEP_FUNCTION_ARN', documentProcessingWorkflow.stateMachineArn);
-    documentProcessingWorkflow.grantStartExecution(batchProcessorFunction);
 
     // API Gateway integration with Lambda
     const chatIntegration = new apigateway.LambdaIntegration(agentProxyFunction);
@@ -287,6 +299,34 @@ export class YmcaAiStack extends cdk.Stack {
       ],
     });
 
+    // Step Functions workflow for document processing pipeline
+    const documentProcessingWorkflow = this.createDocumentProcessingWorkflow(
+      textractAsyncFunction,
+      textractPostprocessorFunction,
+      checkTextractStatusFunction
+    );
+
+    // S3 event notification to trigger document processing workflow
+    documentsBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3Notifications.LambdaDestination(batchProcessorFunction),
+      { prefix: 'input/' }
+    );
+
+    // Update batch processor to trigger Step Functions - do this after workflow creation
+    batchProcessorFunction.addEnvironment('STEP_FUNCTION_ARN', documentProcessingWorkflow.stateMachineArn);
+    documentProcessingWorkflow.grantStartExecution(batchProcessorFunction);
+    
+    // Add Step Functions permissions to batch processor role
+    batchProcessorRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'states:StartExecution',
+        'states:DescribeExecution',
+      ],
+      resources: [documentProcessingWorkflow.stateMachineArn],
+    }));
+
     // Outputs for reference
     new cdk.CfnOutput(this, 'ApiEndpoint', {
       value: api.url,
@@ -320,9 +360,9 @@ export class YmcaAiStack extends cdk.Stack {
   }
 
   private createDocumentProcessingWorkflow(
-    batchProcessor: lambda.Function,
     textractAsync: lambda.Function,
-    textractPostprocessor: lambda.Function
+    textractPostprocessor: lambda.Function,
+    checkStatusFunction: lambda.Function
   ): stepfunctions.StateMachine {
     
     // Define Step Functions tasks
@@ -333,12 +373,13 @@ export class YmcaAiStack extends cdk.Stack {
 
     // Wait state for Textract async processing
     const waitForTextract = new stepfunctions.Wait(this, 'WaitForTextract', {
-      time: stepfunctions.WaitTime.duration(cdk.Duration.seconds(30)),
+      time: stepfunctions.WaitTime.duration(cdk.Duration.seconds(60)),
     });
 
-    // Check Textract job status (placeholder - would need actual status checking)
-    const checkTextractStatus = new stepfunctions.Pass(this, 'CheckTextractStatus', {
-      result: stepfunctions.Result.fromObject({ status: 'SUCCEEDED' }),
+    // Check Textract job status using external function
+    const checkTextractStatus = new stepfunctionsTasks.LambdaInvoke(this, 'CheckTextractStatus', {
+      lambdaFunction: checkStatusFunction,
+      outputPath: '$.Payload',
     });
 
     // Process Textract results
@@ -357,7 +398,7 @@ export class YmcaAiStack extends cdk.Stack {
       comment: 'Document processing failed',
     });
 
-    // Define the workflow
+    // Define the workflow with proper status checking
     const definition = startTextractTask
       .next(waitForTextract)
       .next(checkTextractStatus)
@@ -370,13 +411,17 @@ export class YmcaAiStack extends cdk.Stack {
           stepfunctions.Condition.stringEquals('$.status', 'FAILED'),
           processingFailed
         )
-        .otherwise(waitForTextract) // Continue waiting if still in progress
+        .when(
+          stepfunctions.Condition.stringEquals('$.status', 'PARTIAL_SUCCESS'),
+          processingFailed
+        )
+        .otherwise(waitForTextract) // Continue waiting if IN_PROGRESS
       );
 
     // Create the state machine
     const stateMachine = new stepfunctions.StateMachine(this, 'YmcaDocumentProcessingWorkflow', {
       stateMachineName: 'ymca-document-processing',
-      definition,
+      definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
       timeout: cdk.Duration.minutes(30),
     });
 

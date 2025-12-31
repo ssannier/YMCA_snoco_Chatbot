@@ -48,6 +48,21 @@ This directory contains the Lambda functions for the YMCA AI document processing
 - `DOCUMENTS_BUCKET`: Source S3 bucket name
 - `VECTOR_STORE_BUCKET`: Destination S3 bucket for processed content
 
+### 4. Check Textract Status (`check-textract-status/`)
+**Purpose**: Monitors the status of asynchronous Textract jobs.
+
+**Trigger**: Step Functions workflow
+**Runtime**: Node.js 20.x
+**Key Features**:
+- Checks job status for both text detection and document analysis
+- Returns detailed status information including error messages
+- Handles job completion, failure, and in-progress states
+- Provides status updates for Step Functions workflow decisions
+
+**Environment Variables**: None required
+- `DOCUMENTS_BUCKET`: Source S3 bucket name
+- `VECTOR_STORE_BUCKET`: Destination S3 bucket for processed content
+
 ## Document Processing Flow
 
 ```
@@ -57,9 +72,11 @@ This directory contains the Lambda functions for the YMCA AI document processing
 4. Step Functions → Textract Async Lambda
 5. Textract Async → Starts AWS Textract Job
 6. Step Functions → Waits for Textract Completion
-7. Step Functions → Textract Postprocessor Lambda
-8. Textract Postprocessor → Retrieves & Processes Results
-9. Processed Content → S3 (vector store bucket)
+7. Step Functions → Check Textract Status Lambda
+8. Check Status → Returns job status to Step Functions
+9. Step Functions → Textract Postprocessor Lambda (if successful)
+10. Textract Postprocessor → Retrieves & Processes Results
+11. Processed Content → S3 (vector store bucket)
 ```
 
 ## Supported File Types

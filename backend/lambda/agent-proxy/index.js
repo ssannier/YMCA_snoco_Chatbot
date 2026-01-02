@@ -162,6 +162,7 @@ RESPONSE REQUIREMENTS:
 5. **HUMAN ELEMENTS**: Include specific people, dates, locations, and personal stories from the context
 6. **MODERN RELEVANCE**: Connect historical insights to present-day YMCA work and community needs
 7. **CITE SOURCES**: Reference the source numbers [Source 1], [Source 2], etc. in your narrative
+8. **CONVERSATION STARTERS**: Generate 3 engaging questions that help users explore related topics, compare to today, or dig deeper into specific aspects
 
 RESPONSE FORMAT (JSON):
 {
@@ -178,9 +179,10 @@ RESPONSE FORMAT (JSON):
     "Another important theme or pattern from the sources"
   ],
   "modernReflection": "How this historical moment teaches us about today's challenges and opportunities in YMCA work",
-  "suggestedFollowUps": [
-    "Thoughtful follow-up question based on the historical content",
-    "Another question that would help explore related historical themes"
+  "exploreFurther": [
+    "How does this compare to today?",
+    "What other [related topic] did the YMCA respond to?",
+    "Tell me about YMCA [related aspect from the story]"
   ]
 }
 
@@ -264,9 +266,10 @@ IMPORTANT:
             },
             lessonsAndThemes: ["Historical continuity in YMCA's mission", "Community resilience and adaptation"],
             modernReflection: "These historical insights remind us of the YMCA's enduring commitment to community service.",
-            suggestedFollowUps: [
+            exploreFurther: [
               "What other historical periods would you like to explore?",
-              "How did the YMCA adapt to other major challenges?"
+              "How did the YMCA adapt to other major challenges?",
+              "Tell me about YMCA community programs today"
             ]
           },
           rawText: generatedText
@@ -288,9 +291,10 @@ IMPORTANT:
             narrative: "I'm currently unable to access the YMCA historical archives. Please try again in a moment or contact your local YMCA for historical information.",
             whyItMatters: "Your questions about YMCA history deserve proper attention from our archives."
           },
-          suggestedFollowUps: [
+          exploreFurther: [
             "Try asking your question again",
-            "Contact your local YMCA for historical information"
+            "Tell me about YMCA programs in the 1900s",
+            "What was the YMCA's role in community development?"
           ]
         },
         rawText: "Knowledge Base temporarily unavailable"
@@ -440,9 +444,10 @@ IMPORTANT:
           narrative: "I apologize, but I encountered an error processing your request. Please try again or contact your local YMCA for assistance.",
           whyItMatters: "Your questions about YMCA history and programs are important to us."
         },
-        suggestedFollowUps: [
+        exploreFurther: [
           "Try rephrasing your question",
-          "Contact your local YMCA directly"
+          "What did the YMCA do during major historical events?",
+          "Tell me about YMCA youth programs"
         ]
       },
       responseType: 'error',

@@ -1,8 +1,9 @@
 const { BedrockAgentRuntimeClient, RetrieveCommand } = require('@aws-sdk/client-bedrock-agent-runtime');
-const { BedrockRuntimeClient, InvokeModelCommand } = require('@aws-sdk/client-bedrock-runtime');
+const { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } = require('@aws-sdk/client-bedrock-runtime');
 const { TranslateClient, TranslateTextCommand, DetectDominantLanguageCommand } = require('@aws-sdk/client-translate');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+const { Writable } = require('stream');
 
 // Initialize AWS clients
 const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: process.env.REGION || 'us-west-2' });
@@ -31,21 +32,28 @@ const SUPPORTED_LANGUAGES = {
   'ru': 'Russian'
 };
 
-exports.handler = async (event) => {
+// Main handler logic (shared between streaming and non-streaming)
+async function handleRequest(event, responseStream = null) {
   console.log('YMCA AI Agent Proxy - Event:', JSON.stringify(event, null, 2));
-  
+
   try {
     // Parse request body
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const { 
-      message, 
-      conversationId, 
+    const {
+      message,
+      conversationId,
       language = 'auto',
       sessionId = generateSessionId(),
       userId = 'anonymous'
     } = body;
 
     if (!message) {
+      if (responseStream) {
+        const errorResponse = createResponse(400, { error: 'Message is required' });
+        responseStream.write(JSON.stringify(errorResponse));
+        responseStream.end();
+        return;
+      }
       return createResponse(400, { error: 'Message is required' });
     }
 
@@ -110,8 +118,8 @@ exports.handler = async (event) => {
         },
         retrievalConfiguration: {
           vectorSearchConfiguration: {
-            numberOfResults: 10, // Get more context for rich storytelling
-            overrideSearchType: 'HYBRID' // Use both semantic and keyword search
+            numberOfResults: 10 // Get more context for rich storytelling
+            // Using default SEMANTIC search (HYBRID not supported with S3_VECTORS)
           }
         }
       });
@@ -184,25 +192,54 @@ IMPORTANT:
 - Don't invent facts not present in the context
 - If sources conflict, acknowledge different perspectives`;
 
-      const invokeCommand = new InvokeModelCommand({
-        modelId: 'amazon.nova-pro-v1:0',
+      // Use streaming for real-time response
+      const streamCommand = new InvokeModelWithResponseStreamCommand({
+        modelId: 'us.amazon.nova-pro-v1:0',
         body: JSON.stringify({
           messages: [{
             role: 'user',
-            content: [{
-              type: 'text',
-              text: enhancedPrompt
-            }]
+            content: [{ text: enhancedPrompt }] // Nova format: just text, no type field
           }],
-          max_tokens: 3000,
-          temperature: 0.7,
-          top_p: 0.9
+          inferenceConfig: {
+            maxTokens: 3000,
+            temperature: 0.7
+          }
         })
       });
 
-      const generateResult = await bedrockRuntimeClient.send(invokeCommand);
-      const responseBody = JSON.parse(new TextDecoder().decode(generateResult.body));
-      const generatedText = responseBody.output.message.content[0].text;
+      const streamResult = await bedrockRuntimeClient.send(streamCommand);
+      let generatedText = '';
+
+      // Process stream chunks - Amazon Nova streaming format
+      for await (const chunk of streamResult.body) {
+        if (chunk.chunk?.bytes) {
+          const chunkText = new TextDecoder().decode(chunk.chunk.bytes);
+          try {
+            const chunkJson = JSON.parse(chunkText);
+            console.log('Stream chunk type:', Object.keys(chunkJson));
+
+            // Handle Nova contentBlockDelta events (text chunks)
+            if (chunkJson.contentBlockDelta?.delta?.text) {
+              const textChunk = chunkJson.contentBlockDelta.delta.text;
+              generatedText += textChunk;
+
+              // Stream chunk to client if responseStream is available (raw text, not JSON-wrapped)
+              if (responseStream) {
+                responseStream.write(textChunk);
+              }
+            }
+            // Handle other Nova event types if needed
+            else if (chunkJson.messageStart) {
+              console.log('Message started');
+            }
+            else if (chunkJson.messageStop) {
+              console.log('Message stopped, stop reason:', chunkJson.messageStop.stopReason);
+            }
+          } catch (parseError) {
+            console.warn('Failed to parse chunk:', chunkText, parseError);
+          }
+        }
+      }
 
       // Try to parse as JSON first, fallback to structured text if needed
       try {
@@ -346,7 +383,7 @@ IMPORTANT:
     }
 
     // Return enhanced response with storytelling format
-    return createResponse(200, {
+    const responseData = {
       response: finalResponse.content,
       responseType: finalResponse.type,
       rawResponse: finalResponse.rawText,
@@ -363,11 +400,23 @@ IMPORTANT:
         responseStructured: finalResponse.type === 'structured',
         fallbackUsed: finalResponse.fallback || false
       }
-    });
+    };
+
+    // If streaming, send delimiter and final metadata, then close stream
+    if (responseStream) {
+      // Send delimiter to separate streaming content from metadata
+      responseStream.write('\n\n---METADATA---\n');
+      // Send final metadata as JSON
+      responseStream.write(JSON.stringify(responseData));
+      responseStream.end();
+      return;
+    }
+
+    return createResponse(200, responseData);
 
   } catch (error) {
     console.error('Handler error:', error);
-    
+
     // Store error analytics
     try {
       await dynamoClient.send(new PutCommand({
@@ -384,7 +433,7 @@ IMPORTANT:
       console.error('Failed to store error analytics:', analyticsError);
     }
 
-    return createResponse(500, {
+    const errorResponse = {
       response: {
         story: {
           title: "Technical Difficulties",
@@ -399,9 +448,35 @@ IMPORTANT:
       responseType: 'error',
       error: 'Internal server error',
       timestamp: new Date().toISOString()
-    });
+    };
+
+    // If streaming, send error and close stream
+    if (responseStream) {
+      responseStream.write('\n\n---ERROR---\n');
+      responseStream.write(JSON.stringify(errorResponse));
+      responseStream.end();
+      return;
+    }
+
+    return createResponse(500, errorResponse);
   }
+}
+
+// Standard handler (non-streaming) - for REST API
+exports.handler = async (event) => {
+  return await handleRequest(event, null);
 };
+
+// Streaming handler - for API Gateway with response streaming
+exports.streamingHandler = awslambda.streamifyResponse(
+  async (event, responseStream) => {
+    // Write status code and padding as required by API Gateway
+    responseStream.write('{"statusCode": 200}');
+    responseStream.write("\x00".repeat(8));
+
+    await handleRequest(event, responseStream);
+  }
+);
 
 // Helper functions
 function createResponse(statusCode, body) {

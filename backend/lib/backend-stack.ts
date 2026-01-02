@@ -8,6 +8,11 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import * as stepfunctionsTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load environment variables from backend/.env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 export class YmcaAiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -17,7 +22,7 @@ export class YmcaAiStack extends cdk.Stack {
     // input/ - stores initial documents uploaded for processing
     // output/ - stores processed output from textract pipeline (used by Bedrock Knowledge Base)
     const documentsBucket = new s3.Bucket(this, 'YmcaDocumentsBucket', {
-      bucketName: `ymca-documents-${this.account}-${this.region}`,
+      bucketName: process.env.DOCUMENTS_BUCKET || `ymca-documents-${this.account}-${this.region}`,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -26,7 +31,7 @@ export class YmcaAiStack extends cdk.Stack {
 
     // DynamoDB Tables for analytics and conversation tracking
     const conversationTable = new dynamodb.Table(this, 'YmcaConversationTable', {
-      tableName: 'ymca-conversations',
+      tableName: process.env.CONVERSATION_TABLE || 'ymca-conversations',
       partitionKey: { name: 'conversationId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -34,7 +39,7 @@ export class YmcaAiStack extends cdk.Stack {
     });
 
     const analyticsTable = new dynamodb.Table(this, 'YmcaAnalyticsTable', {
-      tableName: 'ymca-analytics',
+      tableName: process.env.ANALYTICS_TABLE || 'ymca-analytics',
       partitionKey: { name: 'queryId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -91,18 +96,29 @@ export class YmcaAiStack extends cdk.Stack {
               ],
               resources: ['*'],
             }),
-            // Bedrock permissions
+            // Bedrock permissions - for foundation models (all regions) and inference profiles
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
               actions: [
                 'bedrock:InvokeModel',
                 'bedrock:InvokeModelWithResponseStream',
+              ],
+              resources: [
+                `arn:aws:bedrock:*::foundation-model/*`, // Allow cross-region routing
+                `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`,
+              ],
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
                 'bedrock:Retrieve',
                 'bedrock:RetrieveAndGenerate',
                 'bedrock:ListKnowledgeBases',
                 'bedrock:GetKnowledgeBase',
               ],
-              resources: ['*'],
+              resources: [
+                `arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/*`,
+              ],
             }),
           ],
         }),
@@ -128,7 +144,7 @@ export class YmcaAiStack extends cdk.Stack {
       },
     });
 
-    // Lambda function placeholders (will be implemented in subsequent tasks)
+    // Lambda function for standard (non-streaming) requests
     const agentProxyFunction = new lambda.Function(this, 'YmcaAgentProxyFunction', {
       functionName: 'ymca-agent-proxy',
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -141,8 +157,37 @@ export class YmcaAiStack extends cdk.Stack {
         CONVERSATION_TABLE_NAME: conversationTable.tableName,
         ANALYTICS_TABLE_NAME: analyticsTable.tableName,
         DOCUMENTS_BUCKET: documentsBucket.bucketName,
-        KNOWLEDGE_BASE_ID: 'VK00OSVVTL', // Set the actual Knowledge Base ID
-        REGION: this.region,
+        KNOWLEDGE_BASE_ID: process.env.KB_ID || '',
+        REGION: process.env.AWS_REGION || this.region,
+      },
+    });
+
+    // Lambda function for streaming requests with response streaming enabled
+    const agentProxyStreamingFunction = new lambda.Function(this, 'YmcaAgentProxyStreamingFunction', {
+      functionName: 'ymca-agent-proxy-streaming',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.streamingHandler',
+      code: lambda.Code.fromAsset('lambda/agent-proxy'),
+      role: lambdaExecutionRole,
+      timeout: cdk.Duration.minutes(15),
+      memorySize: 1024,
+      environment: {
+        CONVERSATION_TABLE_NAME: conversationTable.tableName,
+        ANALYTICS_TABLE_NAME: analyticsTable.tableName,
+        DOCUMENTS_BUCKET: documentsBucket.bucketName,
+        KNOWLEDGE_BASE_ID: process.env.KB_ID || '',
+        REGION: process.env.AWS_REGION || this.region,
+      },
+    });
+
+    // Add Function URL with streaming enabled for the streaming function
+    const streamingFunctionUrl = agentProxyStreamingFunction.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambda.HttpMethod.POST],
+        allowedHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
       },
     });
 
@@ -157,6 +202,7 @@ export class YmcaAiStack extends cdk.Stack {
       memorySize: 512,
       environment: {
         DOCUMENTS_BUCKET: documentsBucket.bucketName,
+        REGION: process.env.AWS_REGION || this.region,
         // STEP_FUNCTION_ARN will be added after workflow creation
       },
     });
@@ -171,6 +217,7 @@ export class YmcaAiStack extends cdk.Stack {
       memorySize: 512,
       environment: {
         DOCUMENTS_BUCKET: documentsBucket.bucketName,
+        REGION: process.env.AWS_REGION || this.region,
       },
     });
 
@@ -184,6 +231,7 @@ export class YmcaAiStack extends cdk.Stack {
       memorySize: 2048, // Increase memory for large document processing
       environment: {
         DOCUMENTS_BUCKET: documentsBucket.bucketName,
+        REGION: process.env.AWS_REGION || this.region,
       },
     });
 
@@ -195,6 +243,9 @@ export class YmcaAiStack extends cdk.Stack {
       role: lambdaExecutionRole,
       timeout: cdk.Duration.minutes(5),
       memorySize: 256,
+      environment: {
+        REGION: process.env.AWS_REGION || this.region,
+      },
     });
 
     // API Gateway for REST API
@@ -214,12 +265,57 @@ export class YmcaAiStack extends cdk.Stack {
       },
     });
 
-    // API Gateway integration with Lambda
+    // API Gateway integration with Lambda (non-streaming)
     const chatIntegration = new apigateway.LambdaIntegration(agentProxyFunction);
 
     // API routes
     const chatResource = api.root.addResource('chat');
     chatResource.addMethod('POST', chatIntegration);
+
+    // Streaming endpoint with response streaming enabled
+    const chatStreamResource = api.root.addResource('chat-stream');
+
+    // Use AwsIntegration for response streaming with the correct Lambda streaming API endpoint
+    const chatStreamIntegration = new apigateway.AwsIntegration({
+      service: 'lambda',
+      path: `2021-11-15/functions/${agentProxyStreamingFunction.functionArn}/response-stream-invocations`,
+      integrationHttpMethod: 'POST',
+      options: {
+        credentialsRole: new iam.Role(this, 'StreamingApiRole', {
+          assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+          inlinePolicies: {
+            InvokeLambda: new iam.PolicyDocument({
+              statements: [
+                new iam.PolicyStatement({
+                  actions: ['lambda:InvokeFunction', 'lambda:InvokeWithResponseStream'],
+                  resources: [agentProxyStreamingFunction.functionArn],
+                }),
+              ],
+            }),
+          },
+        }),
+        passthroughBehavior: apigateway.PassthroughBehavior.WHEN_NO_MATCH,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Content-Type': "'text/event-stream'",
+            },
+          },
+        ],
+      },
+    });
+
+    chatStreamResource.addMethod('POST', chatStreamIntegration, {
+      methodResponses: [
+        {
+          statusCode: '200',
+          responseParameters: {
+            'method.response.header.Content-Type': true,
+          },
+        },
+      ],
+    });
 
     // Document upload endpoint
     const uploadResource = api.root.addResource('upload');
@@ -307,6 +403,21 @@ export class YmcaAiStack extends cdk.Stack {
       description: 'YMCA AI API Gateway endpoint',
     });
 
+    new cdk.CfnOutput(this, 'ChatEndpoint', {
+      value: `${api.url}chat`,
+      description: 'Non-streaming chat endpoint',
+    });
+
+    new cdk.CfnOutput(this, 'ChatStreamingEndpoint', {
+      value: `${api.url}chat-stream`,
+      description: 'Streaming chat endpoint with real-time response (API Gateway - may have limitations)',
+    });
+
+    new cdk.CfnOutput(this, 'StreamingFunctionUrl', {
+      value: streamingFunctionUrl.url,
+      description: 'Lambda Function URL with native streaming support (recommended for streaming)',
+    });
+
     new cdk.CfnOutput(this, 'DocumentsBucketName', {
       value: documentsBucket.bucketName,
       description: 'S3 bucket for YMCA documents (input/ for uploads, output/ for Bedrock Knowledge Base)',
@@ -336,7 +447,7 @@ NEXT STEPS - Create Bedrock Knowledge Base:
 4. Set S3 prefix to: output/ (processed documents)
 5. Select "Titan Text Embeddings V2" model
 6. Choose "Quick create a new vector store" with S3 Vectors
-7. After creation, update Lambda env var KNOWLEDGE_BASE_ID
+7. After creation, update KB_ID in .env file with your Knowledge Base ID
       `,
       description: 'Post-deployment setup instructions for Bedrock Knowledge Base',
     });

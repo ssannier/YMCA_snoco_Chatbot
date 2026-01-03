@@ -55,3 +55,6 @@ yarn-error.log*
 
 # Vercel
 .vercel
+
+# Temporarily untracked Lambda functions
+backend/lambda/textract-multimodal-processor/

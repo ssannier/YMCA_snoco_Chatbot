@@ -10,7 +10,7 @@ The architecture follows a serverless RAG (Retrieval-Augmented Generation) patte
 
 ## Architecture
 
-The YMCA.ai system follows a serverless RAG (Retrieval-Augmented Generation) architecture as depicted in the architecture diagram located at `docs/media/ymca_architecture.png`. The system is composed of several key layers and workflows:
+The YMCA.ai system follows a serverless RAG (Retrieval-Augmented Generation) architecture as depicted in the architecture diagram located at `docs/media/ymca_updated_architecture.png`. The system is composed of several key layers and workflows:
 
 ### Architecture Overview
 

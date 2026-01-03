@@ -33,7 +33,7 @@ The YMCA AI system leverages AWS serverless architecture to create a scalable, m
 
 Key components include document ingestion via S3, automated processing through Step Functions and Textract, knowledge storage in Bedrock Knowledge Base, and a React-based frontend for user interaction.
 
-![Architecture Diagram](./docs/media/ymca_architecture.png)
+![Architecture Diagram](./docs/media/ymca_updated_arch.png)
 
 **Architecture Flow:**
 1. **Document Upload** → Users upload historical documents via the web interface to S3 `input/` folder

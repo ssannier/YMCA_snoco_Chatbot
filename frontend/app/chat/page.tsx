@@ -54,11 +54,11 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
     if (message.isStreaming && message.role === 'assistant') {
       const response = message.content as ChatResponse;
       const narrative = response.response?.story?.narrative || '';
-      
+
       if (narrative && narrative !== displayedText) {
         setIsTyping(true);
         let currentIndex = displayedText.length;
-        
+
         const typeNextChar = () => {
           if (currentIndex < narrative.length) {
             setDisplayedText(narrative.substring(0, currentIndex + 1));
@@ -70,7 +70,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
             setIsTyping(false);
           }
         };
-        
+
         typeNextChar();
       }
     } else if (!message.isStreaming) {
@@ -320,9 +320,9 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                   <button
                     key={index}
                     onClick={() => onSuggestionClick?.(suggestion)}
-                    className={cn("bg-[rgba(0,137,208,0.1)] border border-[rgba(0,137,208,0.3)] border-solid content-stretch flex gap-[8px] items-center px-[21px] py-[12px] relative rounded-[100px] shrink-0 hover:bg-[rgba(0,137,208,0.2)] transition-colors cursor-pointer")}
+                    className={cn("bg-[rgba(0,137,208,0.1)] border border-[rgba(0,137,208,0.3)] border-solid flex gap-[8px] items-center px-[21px] py-[12px] relative rounded-[20px] hover:bg-[rgba(0,137,208,0.2)] transition-colors cursor-pointer h-auto max-w-full")}
                   >
-                    <p className="font-normal leading-[20px] not-italic text-[#231f20] text-[14px]">
+                    <p className="font-normal leading-[20px] not-italic text-[#231f20] text-[14px] text-left break-words whitespace-normal w-full">
                       {suggestion}
                     </p>
                   </button>

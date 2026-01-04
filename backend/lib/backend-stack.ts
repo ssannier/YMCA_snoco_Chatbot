@@ -27,6 +27,7 @@ export class YmcaAiStack extends cdk.Stack {
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
     });
 
     // DynamoDB Tables for analytics and conversation tracking

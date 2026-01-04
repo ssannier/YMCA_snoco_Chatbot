@@ -2,11 +2,10 @@ const { BedrockAgentRuntimeClient, RetrieveCommand } = require('@aws-sdk/client-
 const { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } = require('@aws-sdk/client-bedrock-runtime');
 const { TranslateClient, TranslateTextCommand } = require('@aws-sdk/client-translate');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+const { S3Client, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { Writable } = require('stream');
-const { randomUUID } = require('crypto');
 
 // Initialize AWS clients
 const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: process.env.REGION || 'us-west-2' });
@@ -19,12 +18,11 @@ const s3Client = new S3Client({ region: process.env.REGION || 'us-west-2' });
 const KNOWLEDGE_BASE_ID = process.env.KNOWLEDGE_BASE_ID;
 const CONVERSATION_TABLE = process.env.CONVERSATION_TABLE_NAME;
 const ANALYTICS_TABLE = process.env.ANALYTICS_TABLE_NAME;
-const DOCUMENT_MAPPINGS_TABLE = process.env.DOCUMENT_MAPPINGS_TABLE_NAME || CONVERSATION_TABLE;
 
 // Supported languages for YMCA multilingual support
 const SUPPORTED_LANGUAGES = {
   'en': 'English',
-  'es': 'Spanish', 
+  'es': 'Spanish',
   'fr': 'French',
   'de': 'German',
   'it': 'Italian',
@@ -100,7 +98,7 @@ async function handleRequest(event, responseStream = null) {
     let ragResponse;
     let citations = [];
     let retrievedContext = '';
-    
+
     try {
       // First, retrieve relevant chunks from Knowledge Base
       const retrieveCommand = new RetrieveCommand({
@@ -117,59 +115,59 @@ async function handleRequest(event, responseStream = null) {
       });
 
       const retrieveResult = await bedrockAgentClient.send(retrieveCommand);
-      
+
       // Process retrieved chunks and build context
       if (retrieveResult.retrievalResults && retrieveResult.retrievalResults.length > 0) {
-        // Extract citations with proper metadata and generate obfuscated document URLs
+        // Extract citations with proper metadata and generate pre-signed URLs
         citations = await Promise.all(retrieveResult.retrievalResults.map(async (result, index) => {
           const s3Uri = result.location?.s3Location?.uri || '';
 
           // Extract original PDF filename from the processed JSON path
           // Example: s3://bucket/output/processed-text/doc-123/1981.pdf.json -> 1981.pdf
           let pdfFilename = 'Document';
-          let documentAccessUrl = null;
+          let pdfUrl = null;
 
           if (s3Uri) {
             const match = s3Uri.match(/\/([^/]+)\.pdf\.json$/);
             if (match) {
               pdfFilename = match[1] + '.pdf';
 
-              // Generate UUID to obfuscate S3 details
-              const documentId = randomUUID();
-              const bucket = process.env.DOCUMENTS_BUCKET;
-              const key = `input/${pdfFilename}`;
-
-              // Store UUID -> S3 location mapping in DynamoDB with TTL
+              // Generate pre-signed URL for the original PDF in input/ directory
               try {
-                const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour TTL
-                await dynamoClient.send(new PutCommand({
-                  TableName: DOCUMENT_MAPPINGS_TABLE,
-                  Item: {
-                    documentId: documentId,
-                    itemType: 'document-mapping',
-                    bucket: bucket,
-                    key: key,
-                    createdAt: Date.now(),
-                    expiresAt: expiresAt
-                  }
-                }));
+                const bucket = process.env.DOCUMENTS_BUCKET;
+                const key = `input/${pdfFilename}`;
 
-                // Return obfuscated URL path (API Gateway will handle /documents/:id route)
-                documentAccessUrl = `/documents/${documentId}`;
+                // Try to retrieve original filename from metadata (for obfuscated files)
+                let displayFilename = pdfFilename;
+                try {
+                  const headCommand = new HeadObjectCommand({ Bucket: bucket, Key: key });
+                  const metadata = await s3Client.send(headCommand);
+                  if (metadata.Metadata && (metadata.Metadata['original-name'] || metadata.Metadata['x-amz-meta-original-name'])) {
+                    displayFilename = metadata.Metadata['original-name'] || metadata.Metadata['x-amz-meta-original-name'];
+                  }
+                } catch (headError) {
+                  // Ignore if metadata fetch fails
+                }
+
+                const command = new GetObjectCommand({
+                  Bucket: bucket,
+                  Key: key,
+                  ResponseContentDisposition: `inline; filename="${displayFilename}"`
+                });
+
+                pdfUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 }); // 1 minute (LOWEST expiry for security)
+                pdfFilename = displayFilename; // Update title
               } catch (error) {
-                console.warn(`Failed to store document mapping for ${pdfFilename}:`, error);
+                console.warn(`Failed to generate pre-signed URL for ${pdfFilename}:`, error);
               }
             }
           }
 
-          // Use UUID to hide sensitive filename information
-          const displayId = randomUUID();
-
           return {
             id: `source-${index + 1}`,
-            title: `Document-${displayId}`,
+            title: pdfFilename,
             source: `YMCA Historical Archives`,
-            sourceUrl: documentAccessUrl,
+            sourceUrl: pdfUrl,
             confidence: result.score || 0.8,
             excerpt: result.content?.text?.substring(0, 300) + '...' || '',
             fullText: result.content?.text || ''
@@ -313,13 +311,13 @@ IMPORTANT:
           rawText: generatedText
         };
       }
-      
+
       console.log('RAG response generated successfully using Retrieve API');
       console.log('Citations processed:', citations.length);
-      
+
     } catch (error) {
       console.error('RAG query failed:', error);
-      
+
       // Simple error response
       ragResponse = {
         type: 'error',
@@ -630,7 +628,7 @@ async function handleStreamingRequest(event, responseStream) {
     let ragResponse;
     let citations = [];
     let retrievedContext = '';
-    
+
     try {
       // First, retrieve relevant chunks from Knowledge Base
       const retrieveCommand = new RetrieveCommand({
@@ -646,59 +644,59 @@ async function handleStreamingRequest(event, responseStream) {
       });
 
       const retrieveResult = await bedrockAgentClient.send(retrieveCommand);
-      
+
       // Process retrieved chunks and build context
       if (retrieveResult.retrievalResults && retrieveResult.retrievalResults.length > 0) {
-        // Extract citations with proper metadata and generate obfuscated document URLs
+        // Extract citations with proper metadata and generate pre-signed URLs
         citations = await Promise.all(retrieveResult.retrievalResults.map(async (result, index) => {
           const s3Uri = result.location?.s3Location?.uri || '';
 
           // Extract original PDF filename from the processed JSON path
           // Example: s3://bucket/output/processed-text/doc-123/1981.pdf.json -> 1981.pdf
           let pdfFilename = 'Document';
-          let documentAccessUrl = null;
+          let pdfUrl = null;
 
           if (s3Uri) {
             const match = s3Uri.match(/\/([^/]+)\.pdf\.json$/);
             if (match) {
               pdfFilename = match[1] + '.pdf';
 
-              // Generate UUID to obfuscate S3 details
-              const documentId = randomUUID();
-              const bucket = process.env.DOCUMENTS_BUCKET;
-              const key = `input/${pdfFilename}`;
-
-              // Store UUID -> S3 location mapping in DynamoDB with TTL
+              // Generate pre-signed URL for the original PDF in input/ directory
               try {
-                const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour TTL
-                await dynamoClient.send(new PutCommand({
-                  TableName: DOCUMENT_MAPPINGS_TABLE,
-                  Item: {
-                    documentId: documentId,
-                    itemType: 'document-mapping',
-                    bucket: bucket,
-                    key: key,
-                    createdAt: Date.now(),
-                    expiresAt: expiresAt
-                  }
-                }));
+                const bucket = process.env.DOCUMENTS_BUCKET;
+                const key = `input/${pdfFilename}`;
 
-                // Return obfuscated URL path (API Gateway will handle /documents/:id route)
-                documentAccessUrl = `/documents/${documentId}`;
+                // Try to retrieve original filename from metadata (for obfuscated files)
+                let displayFilename = pdfFilename;
+                try {
+                  const headCommand = new HeadObjectCommand({ Bucket: bucket, Key: key });
+                  const metadata = await s3Client.send(headCommand);
+                  if (metadata.Metadata && (metadata.Metadata['original-name'] || metadata.Metadata['x-amz-meta-original-name'])) {
+                    displayFilename = metadata.Metadata['original-name'] || metadata.Metadata['x-amz-meta-original-name'];
+                  }
+                } catch (headError) {
+                  // Ignore if metadata fetch fails
+                }
+
+                const command = new GetObjectCommand({
+                  Bucket: bucket,
+                  Key: key,
+                  ResponseContentDisposition: `inline; filename="${displayFilename}"`
+                });
+
+                pdfUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 }); // 5 minute (LOWEST expiry for security)
+                pdfFilename = displayFilename; // Update title
               } catch (error) {
-                console.warn(`Failed to store document mapping for ${pdfFilename}:`, error);
+                console.warn(`Failed to generate pre-signed URL for ${pdfFilename}:`, error);
               }
             }
           }
 
-          // Use UUID to hide sensitive filename information
-          const displayId = randomUUID();
-
           return {
             id: `source-${index + 1}`,
-            title: `Document-${displayId}`,
+            title: pdfFilename,
             source: `YMCA Historical Archives`,
-            sourceUrl: documentAccessUrl,
+            sourceUrl: pdfUrl,
             confidence: result.score || 0.8,
             excerpt: result.content?.text?.substring(0, 300) + '...' || '',
             fullText: result.content?.text || ''
@@ -847,13 +845,13 @@ IMPORTANT:
           rawText: generatedText
         };
       }
-      
+
       console.log('RAG response generated successfully using Retrieve API');
       console.log('Citations processed:', citations.length);
-      
+
     } catch (error) {
       console.error('RAG query failed:', error);
-      
+
       // Simple error response
       ragResponse = {
         type: 'error',
@@ -1089,58 +1087,3 @@ function generateSessionId() {
 function generateQueryId() {
   return 'query_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
-
-// Document retrieval handler - resolves UUID to pre-signed S3 URL
-exports.documentHandler = async (event, context) => {
-  console.log('Document handler called with event:', JSON.stringify(event, null, 2));
-
-  try {
-    // Extract document ID from path parameters
-    const documentId = event.pathParameters?.documentId || event.pathParameters?.id;
-
-    if (!documentId) {
-      return createResponse(400, { error: 'Document ID is required' });
-    }
-
-    // Look up document mapping in DynamoDB
-    const getResult = await dynamoClient.send(new GetCommand({
-      TableName: DOCUMENT_MAPPINGS_TABLE,
-      Key: {
-        documentId: documentId
-      }
-    }));
-
-    if (!getResult.Item) {
-      return createResponse(404, { error: 'Document not found or expired' });
-    }
-
-    const { bucket, key, expiresAt } = getResult.Item;
-
-    // Check if mapping has expired
-    if (expiresAt && expiresAt < Math.floor(Date.now() / 1000)) {
-      return createResponse(410, { error: 'Document access has expired' });
-    }
-
-    // Generate pre-signed URL for the document
-    const command = new GetObjectCommand({
-      Bucket: bucket,
-      Key: key
-    });
-
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-
-    // Redirect to the pre-signed URL
-    return {
-      statusCode: 302,
-      headers: {
-        'Location': presignedUrl,
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: ''
-    };
-
-  } catch (error) {
-    console.error('Document handler error:', error);
-    return createResponse(500, { error: 'Failed to retrieve document' });
-  }
-};

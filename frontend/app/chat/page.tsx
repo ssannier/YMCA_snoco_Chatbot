@@ -41,6 +41,41 @@ interface MessageBubbleProps {
 
 const MessageBubble = ({ message }: MessageBubbleProps) => {
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Typing effect for streaming messages
+  useEffect(() => {
+    if (message.isStreaming && message.role === 'assistant') {
+      const response = message.content as ChatResponse;
+      const narrative = response.response?.story?.narrative || '';
+      
+      if (narrative && narrative !== displayedText) {
+        setIsTyping(true);
+        let currentIndex = displayedText.length;
+        
+        const typeNextChar = () => {
+          if (currentIndex < narrative.length) {
+            setDisplayedText(narrative.substring(0, currentIndex + 1));
+            currentIndex++;
+            // Vary typing speed for more natural feel
+            const delay = Math.random() * 30 + 10;
+            setTimeout(typeNextChar, delay);
+          } else {
+            setIsTyping(false);
+          }
+        };
+        
+        typeNextChar();
+      }
+    } else if (!message.isStreaming) {
+      // For non-streaming messages, show full text immediately
+      const response = message.content as ChatResponse;
+      const narrative = response.response?.story?.narrative || '';
+      setDisplayedText(narrative);
+      setIsTyping(false);
+    }
+  }, [message.content, message.isStreaming, displayedText]);
 
   if (message.role === 'user') {
     return (
@@ -56,6 +91,34 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 
   // Assistant message
   const response = message.content as ChatResponse;
+
+  // For streaming messages, show the typing effect
+  if (message.isStreaming) {
+    return (
+      <div className="bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col items-start overflow-clip relative rounded-[12px] shrink-0 w-full max-w-[976px]">
+        <div className="content-stretch flex flex-col gap-[40px] items-start p-[40px] relative shrink-0 w-full">
+          <div className={cn("content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full")}>
+            {/* STORY Badge */}
+            <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0")}>
+              <div className={cn("relative shrink-0 size-[16px] text-[#0089d0]")}>
+                <StoryIcon className="w-full h-full" />
+              </div>
+              <p className={cn("font-cachet font-bold leading-[14px] not-italic relative shrink-0 text-[#0089d0] text-[14px] tracking-[0.7px] uppercase")}>
+                STORY
+              </p>
+            </div>
+
+            <div className={cn("font-verdana font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] w-full prose prose-lg max-w-none")}>
+              <ReactMarkdown>{displayedText}</ReactMarkdown>
+              {isTyping && (
+                <span className="inline-block w-2 h-5 bg-[#0089d0] ml-1 animate-pulse" />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Structured response
   if (response.response) {

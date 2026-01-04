@@ -17,7 +17,7 @@ interface ChatContextType {
   error: string | null;
   addUserMessage: (content: string) => string;
   addAssistantMessage: (id: string, content: any) => void;
-  updateStreamingMessage: (id: string, content: string) => void;
+  updateStreamingMessage: (id: string, content: any) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearConversation: () => void;
@@ -83,6 +83,32 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       const existingIndex = prev.messages.findIndex((msg) => msg.id === id);
 
       if (existingIndex >= 0) {
+        const existingMessage = prev.messages[existingIndex];
+        
+        // If the existing message has streaming content and the new message is just a placeholder,
+        // preserve the streaming content
+        if (existingMessage.isStreaming && 
+            existingMessage.content && 
+            typeof existingMessage.content === 'object' &&
+            existingMessage.content.response?.story?.narrative) {
+          const existingNarrative = existingMessage.content.response.story.narrative;
+          const newNarrative = content && typeof content === 'object' && content.response?.story?.narrative;
+          
+          // If new content is empty or just "Streaming response completed", keep the existing content
+          if (!newNarrative || newNarrative === 'Streaming response completed') {
+            newMessage.content = {
+              ...content,
+              response: {
+                ...content.response,
+                story: {
+                  ...content.response?.story,
+                  narrative: existingNarrative,
+                },
+              },
+            };
+          }
+        }
+        
         // Update existing message
         const updatedMessages = [...prev.messages];
         updatedMessages[existingIndex] = newMessage;
@@ -102,7 +128,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     });
   }, []);
 
-  const updateStreamingMessage = useCallback((id: string, content: string) => {
+  const updateStreamingMessage = useCallback((id: string, content: any) => {
     setConversation((prev) => {
       if (!prev) return null;
 

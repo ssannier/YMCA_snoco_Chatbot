@@ -20,7 +20,7 @@ export interface ChatResponse {
     modernReflection?: string;
     exploreFurther?: string[];
   };
-  responseType: 'structured' | 'narrative' | 'error';
+  responseType: 'structured' | 'narrative' | 'error' | 'streaming';
   rawResponse?: string;
   sources?: Source[];
   conversationId: string;

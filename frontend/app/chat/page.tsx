@@ -51,36 +51,38 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
 
   // Typing effect for streaming messages
   useEffect(() => {
-    if (message.isStreaming && message.role === 'assistant') {
-      const response = message.content as ChatResponse;
-      const narrative = response.response?.story?.narrative || '';
+    // Safety check for message content
+    const response = message.content as ChatResponse;
+    const narrative = response?.response?.story?.narrative || '';
 
-      if (narrative && narrative !== displayedText) {
-        setIsTyping(true);
-        let currentIndex = displayedText.length;
-
-        const typeNextChar = () => {
-          if (currentIndex < narrative.length) {
-            setDisplayedText(narrative.substring(0, currentIndex + 1));
-            currentIndex++;
-            // Vary typing speed for more natural feel
-            const delay = Math.random() * 30 + 10;
-            setTimeout(typeNextChar, delay);
-          } else {
-            setIsTyping(false);
-          }
-        };
-
-        typeNextChar();
+    // If not streaming or not assistant or fully displayed, ensure full text is shown
+    if (!message.isStreaming || message.role !== 'assistant') {
+      if (displayedText !== narrative) {
+        setDisplayedText(narrative);
       }
-    } else if (!message.isStreaming) {
-      // For non-streaming messages, show full text immediately
-      const response = message.content as ChatResponse;
-      const narrative = response.response?.story?.narrative || '';
-      setDisplayedText(narrative);
       setIsTyping(false);
+      return;
     }
-  }, [message.content, message.isStreaming, displayedText]);
+
+    // If message is streaming:
+    // Check if we are caught up
+    if (displayedText === narrative) {
+      setIsTyping(false);
+      return;
+    }
+
+    // We are behind. Type the next character.
+    setIsTyping(true);
+    const delay = Math.random() * 20 + 10; // slightly faster typing
+
+    // Use a timeout to schedule the next character update
+    // This breaks the synchronous loop and prevents "Maximum update depth exceeded"
+    const timeoutId = setTimeout(() => {
+      setDisplayedText(narrative.substring(0, displayedText.length + 1));
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
+  }, [message.content, message.isStreaming, displayedText, message.role]);
 
   if (message.role === 'user') {
     return (

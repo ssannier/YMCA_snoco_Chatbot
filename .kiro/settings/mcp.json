@@ -140,6 +140,29 @@
         "git_status",
         "git_diff"
       ]
-    }
+    }, 
+  "figma": {
+    "command": "/Users/etloaner/.local/bin/uvx",
+    "args": [
+       "mcp-figma@latest"
+    ],
+    "env": {
+      "FASTMCP_LOG_LEVEL": "ERROR",
+      "FIGMA_ACCESS_TOKEN": "figd_NduBbRM264McABAniEchW0mMZPWzYe-Lxpts96kE"
+    },
+    "disabled": false,
+    "autoApprove": [
+      "get_design_context",
+      "get_variable_defs",
+      "get_code_connect_map",
+      "add_code_connect_map",
+      "get_screenshot",
+      "create_design_system_rules",
+      "get_metadata",
+      "get_figjam",
+      "whoami",
+      "get_strategy_for_mapping"    
+    ]
   }
+}
 }

@@ -10,9 +10,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 import { useChat } from '../hooks/useChat';
 import { cn } from '../../lib/utils';
 import type { ChatResponse, Message } from '../../types/api';
+import '../../lib/i18n';
 
 // Icon Components imported from lib/icons
 import {
@@ -26,7 +28,11 @@ import {
   WhyItMatteredIcon,
   LessonsIcon,
   MomentTeachesIcon,
-  SourcesIcon
+  SourcesIcon,
+  ShieldIcon,
+  SparklesIcon,
+  UsersIcon,
+  LightbulbIcon
 } from '../../lib/icons';
 
 // Logo image
@@ -334,18 +340,86 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
   return null;
 };
 
+// Starter prompts data with translation keys
+const getStarterPrompts = (t: any) => [
+  {
+    id: 'crisis',
+    titleKey: 'starterCrisisTitle',
+    descKey: 'starterCrisisDesc',
+    icon: ShieldIcon,
+    color: '#EE3124',
+    prompt: 'Tell me about how the YMCA responded during times of crisis in history'
+  },
+  {
+    id: 'youth',
+    titleKey: 'starterYouthTitle',
+    descKey: 'starterYouthDesc',
+    icon: SparklesIcon,
+    color: '#00AEEF',
+    prompt: 'How did YMCA youth programs evolve through the decades?'
+  },
+  {
+    id: 'leadership',
+    titleKey: 'starterLeadershipTitle',
+    descKey: 'starterLeadershipDesc',
+    icon: UsersIcon,
+    color: '#92278F',
+    prompt: 'Share stories about YMCA leadership and social responsibility'
+  },
+  {
+    id: 'innovation',
+    titleKey: 'starterInnovationTitle',
+    descKey: 'starterInnovationDesc',
+    icon: LightbulbIcon,
+    color: '#FDB913',
+    prompt: 'What innovations did the YMCA introduce throughout its history?'
+  }
+];
+
+// Supported languages
+const SUPPORTED_LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'fr', name: 'Français' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'pt', name: 'Português' },
+  { code: 'zh', name: '中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'ko', name: '한국어' },
+  { code: 'ar', name: 'العربية' },
+  { code: 'hi', name: 'हिन्दी' },
+  { code: 'ru', name: 'Русский' }
+];
+
 /**
  * Main Chat Page Component
  */
 export default function ChatPage() {
+  const { t, i18n } = useTranslation();
   const { sendMessage, isLoading, conversation } = useChat();
   const [inputValue, setInputValue] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation?.messages]);
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (languageDropdownOpen && !target.closest('.language-selector')) {
+        setLanguageDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [languageDropdownOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,6 +444,41 @@ export default function ChatPage() {
     }
   };
 
+  const handleStarterPromptClick = (prompt: string) => {
+    if (!isLoading) {
+      sendMessage(prompt);
+    }
+  };
+
+  const handleLanguageChange = (languageCode: string) => {
+    setSelectedLanguage(languageCode);
+    setLanguageDropdownOpen(false);
+
+    // Trigger Google Translate
+    const googleTranslateCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+    if (googleTranslateCombo) {
+      // Map language codes to Google Translate codes
+      const langMap: Record<string, string> = {
+        'en': 'en',
+        'es': 'es',
+        'fr': 'fr',
+        'de': 'de',
+        'it': 'it',
+        'pt': 'pt',
+        'zh': 'zh-CN',
+        'ja': 'ja',
+        'ko': 'ko',
+        'ar': 'ar',
+        'hi': 'hi',
+        'ru': 'ru'
+      };
+
+      const googleLangCode = langMap[languageCode] || languageCode;
+      googleTranslateCombo.value = googleLangCode;
+      googleTranslateCombo.dispatchEvent(new Event('change'));
+    }
+  };
+
   return (
     <div
       className={cn("content-stretch flex flex-col items-start relative size-full min-h-screen bg-[#E1F4FA]")}
@@ -377,19 +486,51 @@ export default function ChatPage() {
       {/* Header */}
       <div className="content-stretch flex flex-col items-center justify-center px-[100px] py-0 relative shrink-0 w-full">
         <div className="content-stretch flex items-center justify-between px-[24px] py-[24px] relative shrink-0 w-full">
-          <Link href="/" className="h-[72px] relative shrink-0 w-[94.161px]">
-            <img alt="YMCA Logo" className="absolute inset-0 max-w-none object-center object-cover pointer-events-none size-full" src="/logo.png" />
+          <Link href="/" className="h-[72px] w-[94.161px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity p-[8px] -m-[8px]">
+            <img alt="YMCA Logo" className="w-full h-full object-contain" src="/logo.png" />
           </Link>
-          <div className="bg-white border border-[#d1d5dc] border-solid content-stretch flex gap-[8px] items-center px-[16px] py-[12px] relative rounded-[12px] shrink-0">
-            <div className="relative shrink-0 size-[20px] text-[#636466]">
-              <GlobeIcon />
-            </div>
-            <p className="font-medium leading-[24px] not-italic relative shrink-0 text-[#231f20] text-[16px] text-center text-nowrap">
-              English
-            </p>
-            <div className="relative shrink-0 size-[24px] text-[#636466]">
-              <ChevronDownIcon />
-            </div>
+          <div className="relative language-selector">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setLanguageDropdownOpen(!languageDropdownOpen);
+              }}
+              className="bg-white border border-[#d1d5dc] border-solid content-stretch flex gap-[8px] items-center px-[16px] py-[12px] relative rounded-[12px] shrink-0 hover:border-[#0089d0] transition-colors cursor-pointer"
+            >
+              <div className="relative shrink-0 size-[20px] text-[#636466]">
+                <GlobeIcon />
+              </div>
+              <p className="font-medium leading-[24px] not-italic relative shrink-0 text-[#231f20] text-[16px] text-center text-nowrap">
+                {SUPPORTED_LANGUAGES.find(lang => lang.code === selectedLanguage)?.name || 'English'}
+              </p>
+              <div className={cn("relative shrink-0 size-[24px] text-[#636466] transition-transform", languageDropdownOpen && "rotate-180")}>
+                <ChevronDownIcon />
+              </div>
+            </button>
+
+            {languageDropdownOpen && (
+              <div className="absolute right-0 top-full mt-[8px] bg-white border border-[#d1d5dc] rounded-[12px] shadow-lg overflow-hidden z-50 min-w-[200px]">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleLanguageChange(lang.code);
+                    }}
+                    className={cn(
+                      "w-full text-left px-[16px] py-[12px] hover:bg-[#f9fafb] transition-colors cursor-pointer",
+                      selectedLanguage === lang.code && "bg-[#E1F4FA] text-[#0089d0] font-medium"
+                    )}
+                  >
+                    {lang.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -398,15 +539,83 @@ export default function ChatPage() {
       <div className="flex-1 content-stretch flex flex-col items-center relative shrink-0 w-full overflow-y-auto">
         <div className="content-stretch flex flex-col gap-[40px] items-start max-w-[1240px] px-[24px] py-[64px] relative shrink-0 w-full">
 
-          {/* Welcome Message */}
+          {/* Welcome Message with Starter Prompts */}
           {(!conversation?.messages || conversation.messages.length === 0) && (
-            <div className={cn("content-stretch flex flex-col items-center gap-[24px] relative shrink-0 w-full text-center")}>
-              <h1 className={cn("font-cachet font-bold text-[48px] text-[#231f20]")}>
-                Ask about YMCA history
-              </h1>
-              <p className={cn("font-verdana font-normal text-[20px] text-[#636466] max-w-[600px]")}>
-                Explore stories, discover lessons, and draw insights from the past to inspire leadership today.
-              </p>
+            <div className={cn("content-stretch flex flex-col items-center gap-[64px] relative shrink-0 w-full")}>
+              {/* Heading */}
+              <div className={cn("content-stretch flex flex-col gap-[16px] items-center not-italic relative shrink-0 text-center")}>
+                <h1 className={cn("font-cachet font-bold leading-normal relative shrink-0 text-[#231f20] text-[48px]")}>
+                  {t('welcomeTitle')}
+                </h1>
+                <p className={cn("font-verdana font-normal leading-[1.5] relative shrink-0 text-[#484848] text-[20px] max-w-[800px]")}>
+                  {t('welcomeSubtitle')}
+                </p>
+              </div>
+
+              {/* Starter Prompt Cards */}
+              <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
+                {/* First Row */}
+                <div className="content-stretch flex gap-[24px] items-start relative shrink-0 w-full">
+                  {getStarterPrompts(t).slice(0, 2).map((prompt) => {
+                    const IconComponent = prompt.icon;
+                    return (
+                      <button
+                        key={prompt.id}
+                        onClick={() => handleStarterPromptClick(prompt.prompt)}
+                        className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex grow items-center min-h-px min-w-px px-[16px] py-[16px] relative rounded-[12px] shrink-0 transition-colors cursor-pointer")}
+                        style={{ ['--hover-color' as any]: prompt.color }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = prompt.color}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5dc'}
+                      >
+                        <div className={cn("basis-0 content-stretch flex flex-col gap-[12px] grow items-start min-h-px min-w-px relative shrink-0")}>
+                          <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0 w-full")}>
+                            <div className="relative shrink-0 size-[40px]">
+                              <IconComponent />
+                            </div>
+                            <p className={cn("font-cachet basis-0 font-medium grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
+                              {t(prompt.titleKey)}
+                            </p>
+                          </div>
+                          <p className={cn("font-verdana font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
+                            {t(prompt.descKey)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Second Row */}
+                <div className="content-stretch flex gap-[24px] items-start relative shrink-0 w-full">
+                  {getStarterPrompts(t).slice(2, 4).map((prompt) => {
+                    const IconComponent = prompt.icon;
+                    return (
+                      <button
+                        key={prompt.id}
+                        onClick={() => handleStarterPromptClick(prompt.prompt)}
+                        className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col grow items-start min-h-px min-w-px relative rounded-[12px] shrink-0 transition-colors cursor-pointer")}
+                        style={{ ['--hover-color' as any]: prompt.color }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = prompt.color}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5dc'}
+                      >
+                        <div className={cn("content-stretch flex flex-col gap-[12px] items-start p-[16px] relative shrink-0 w-full")}>
+                          <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0 w-full")}>
+                            <div className="relative shrink-0 size-[40px]">
+                              <IconComponent />
+                            </div>
+                            <p className={cn("font-cachet basis-0 font-medium grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
+                              {t(prompt.titleKey)}
+                            </p>
+                          </div>
+                          <p className={cn("font-verdana font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
+                            {t(prompt.descKey)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
@@ -428,7 +637,7 @@ export default function ChatPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask your own question about YMCA history, programs, or leadership…"
+              placeholder={t('inputPlaceholder')}
               className="basis-0 font-normal grow leading-[24px] min-h-px min-w-px not-italic relative shrink-0 text-[#757575] text-[16px] bg-transparent border-none outline-none"
               disabled={isLoading}
             />

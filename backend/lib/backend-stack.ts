@@ -426,7 +426,7 @@ export class YmcaAiStack extends cdk.Stack {
     // Update batch processor to trigger Step Functions - do this after workflow creation
     batchProcessorFunction.addEnvironment('STEP_FUNCTION_ARN', documentProcessingWorkflow.stateMachineArn);
     documentProcessingWorkflow.grantStartExecution(batchProcessorFunction);
-    
+
     // Add Step Functions permissions to batch processor role
     batchProcessorRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -498,7 +498,7 @@ export class YmcaAiStack extends cdk.Stack {
     const githubRepo = process.env.GITHUB_REPO;
     // Optional: Only throw if you intend to deploy Amplify. 
     // For now, we'll check if they are present before creating Amplify resources.
-    
+
     if (githubToken && githubOwner && githubRepo) {
       const githubTokenSecret = new secretsmanager.Secret(this, 'GitHubToken', {
         secretName: 'github-secret-token-ymca',
@@ -515,20 +515,21 @@ export class YmcaAiStack extends cdk.Stack {
         buildSpec: codebuild.BuildSpec.fromObjectToYaml({
           version: '1.0',
           frontend: {
+            appRoot: 'frontend',
             phases: {
               preBuild: {
-                commands: ['cd frontend', 'npm install --force'],
+                commands: ['npm install --force'],
               },
               build: {
-                commands: ['cd frontend', 'npm run build'],
+                commands: ['npm run build'],
               },
             },
             artifacts: {
-              baseDirectory: 'frontend/.next', 
+              baseDirectory: '.next',
               files: ['**/*'],
             },
             cache: {
-              paths: ['frontend/node_modules/**/*'],
+              paths: ['node_modules/**/*'],
             },
           },
         }),
@@ -613,7 +614,7 @@ NEXT STEPS:
     textractPostprocessor: lambda.Function,
     checkStatusFunction: lambda.Function
   ): stepfunctions.StateMachine {
-    
+
     // Define Step Functions tasks
     const startTextractTask = new stepfunctionsTasks.LambdaInvoke(this, 'StartTextractTask', {
       lambdaFunction: textractAsync,

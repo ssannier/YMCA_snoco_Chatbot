@@ -43,8 +43,7 @@ export default function Home() {
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
   const { sendMessage } = useChat();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitMessage = () => {
     if (inputValue.trim()) {
       // Send the message using the chat hook
       sendMessage(inputValue);
@@ -53,6 +52,11 @@ export default function Home() {
       // Clear input
       setInputValue('');
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitMessage();
   };
 
   const handleStarterPromptClick = (prompt: string) => {
@@ -65,7 +69,7 @@ export default function Home() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      submitMessage();
     }
   };
 

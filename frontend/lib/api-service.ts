@@ -174,9 +174,8 @@ export const sendStreamingChatMessage = async (
                 onError(parsed.error || 'Unknown streaming error');
                 return;
               }
-            } catch (parseError) {
+            } catch {
               // If not JSON, treat as plain text chunk
-              console.warn('Failed to parse SSE data as JSON:', parseError);
               streamingContent += data;
               onChunk(data);
             }
@@ -197,7 +196,7 @@ export const sendStreamingChatMessage = async (
             if (parsed.type === 'complete') {
               finalResponse = parsed.response;
             }
-          } catch (parseError) {
+          } catch {
             streamingContent += data;
             onChunk(data);
           }

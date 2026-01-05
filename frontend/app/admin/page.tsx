@@ -64,7 +64,7 @@ export default function AdminDashboard() {
 
   return (
     <Authenticator>
-      {({ signOut, user }) => (
+      {({ signOut }) => (
         <div className="min-h-screen bg-gray-50">
           {/* Header */}
           <header className="bg-white border-b border-gray-200">

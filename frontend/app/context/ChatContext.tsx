@@ -8,7 +8,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import type { Message, Conversation } from '../../types/api';
+import type { Message, Conversation, ChatResponse } from '../../types/api';
 import { generateSessionId, generateMessageId } from '../../lib/api-service';
 
 interface ChatContextType {
@@ -16,8 +16,8 @@ interface ChatContextType {
   isLoading: boolean;
   error: string | null;
   addUserMessage: (content: string) => string;
-  addAssistantMessage: (id: string, content: any) => void;
-  updateStreamingMessage: (id: string, content: any) => void;
+  addAssistantMessage: (id: string, content: ChatResponse) => void;
+  updateStreamingMessage: (id: string, content: ChatResponse) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearConversation: () => void;
@@ -67,7 +67,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     return messageId;
   }, []);
 
-  const addAssistantMessage = useCallback((id: string, content: any) => {
+  const addAssistantMessage = useCallback((id: string, content: ChatResponse) => {
     const newMessage: Message = {
       id,
       role: 'assistant',
@@ -128,7 +128,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     });
   }, []);
 
-  const updateStreamingMessage = useCallback((id: string, content: any) => {
+  const updateStreamingMessage = useCallback((id: string, content: ChatResponse) => {
     setConversation((prev) => {
       if (!prev) return null;
 

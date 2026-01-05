@@ -33,8 +33,8 @@ import {
   LightbulbIcon
 } from '../../lib/icons';
 
-// Logo image
-const imgImage3 = "http://localhost:3845/assets/d005aa1de1f0be0acb65a4ca67a096300f4ad73c.png";
+// Logo image - commented out as currently unused
+// const imgImage3 = "http://localhost:3845/assets/d005aa1de1f0be0acb65a4ca67a096300f4ad73c.png";
 
 /**
  * Message Bubble Component
@@ -80,7 +80,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
       setDisplayedText(narrative);
       setIsTyping(false);
     }
-  }, [message.content, message.isStreaming, displayedText]);
+  }, [message.content, message.isStreaming, message.role, displayedText]);
 
   if (message.role === 'user') {
     return (
@@ -339,7 +339,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
 };
 
 // Starter prompts data with translation keys
-const getStarterPrompts = (t: any) => [
+const getStarterPrompts = () => [
   {
     id: 'crisis',
     titleKey: 'starterCrisisTitle',
@@ -451,14 +451,14 @@ export default function ChatPage() {
               <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
                 {/* First Row */}
                 <div className="content-stretch flex gap-[24px] items-start relative shrink-0 w-full">
-                  {getStarterPrompts(t).slice(0, 2).map((prompt) => {
+                  {getStarterPrompts().slice(0, 2).map((prompt) => {
                     const IconComponent = prompt.icon;
                     return (
                       <button
                         key={prompt.id}
                         onClick={() => handleStarterPromptClick(prompt.prompt)}
                         className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex grow items-center min-h-px min-w-px px-[16px] py-[16px] relative rounded-[12px] shrink-0 transition-colors cursor-pointer")}
-                        style={{ ['--hover-color' as any]: prompt.color }}
+                        style={{ '--hover-color': prompt.color } as React.CSSProperties}
                         onMouseEnter={(e) => e.currentTarget.style.borderColor = prompt.color}
                         onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5dc'}
                       >
@@ -482,14 +482,14 @@ export default function ChatPage() {
 
                 {/* Second Row */}
                 <div className="content-stretch flex gap-[24px] items-start relative shrink-0 w-full">
-                  {getStarterPrompts(t).slice(2, 4).map((prompt) => {
+                  {getStarterPrompts().slice(2, 4).map((prompt) => {
                     const IconComponent = prompt.icon;
                     return (
                       <button
                         key={prompt.id}
                         onClick={() => handleStarterPromptClick(prompt.prompt)}
                         className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col grow items-start min-h-px min-w-px relative rounded-[12px] shrink-0 transition-colors cursor-pointer")}
-                        style={{ ['--hover-color' as any]: prompt.color }}
+                        style={{ '--hover-color': prompt.color } as React.CSSProperties}
                         onMouseEnter={(e) => e.currentTarget.style.borderColor = prompt.color}
                         onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5dc'}
                       >

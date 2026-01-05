@@ -264,8 +264,8 @@ export class YmcaAiStack extends cdk.Stack {
     });
 
     // Cognito User Pool for Admin Authentication
-    const userPool = new cognito.UserPool(this, 'YmcaAdminUserPool', {
-      userPoolName: 'ymca-admin-user-pool',
+    const userPool = new cognito.UserPool(this, 'YmcaAdminUserPoolV2', {
+      userPoolName: 'ymca-admin-user-pool-v2',
       selfSignUpEnabled: false, // Only admins can create users
       signInAliases: { email: true },
       autoVerify: { email: true },
@@ -277,7 +277,7 @@ export class YmcaAiStack extends cdk.Stack {
         requireSymbols: true,
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // For dev; use RETAIN for prod
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Allow cleanup for dev
     });
 
     const userPoolClient = userPool.addClient('YmcaAdminUserPoolClient', {
@@ -481,11 +481,13 @@ export class YmcaAiStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UserPoolId', {
       value: userPool.userPoolId,
       description: 'Cognito User Pool ID for Admin Auth',
+      exportName: `${this.stackName}-UserPoolId`,
     });
 
     new cdk.CfnOutput(this, 'UserPoolClientId', {
       value: userPoolClient.userPoolClientId,
       description: 'Cognito User Pool Client ID',
+      exportName: `${this.stackName}-UserPoolClientId`,
     });
 
 
@@ -528,7 +530,30 @@ export class YmcaAiStack extends cdk.Stack {
         }),
         platform: amplifyAlpha.Platform.WEB,
         role: amplifyServiceRole,
-        // amplify.yml in repo defines the build spec
+        customRules: [
+          // Handle admin routes - try exact match first
+          {
+            source: '/admin',
+            target: '/admin.html',
+            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
+          },
+          {
+            source: '/admin/',
+            target: '/admin.html',
+            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
+          },
+          // Handle chat routes
+          {
+            source: '/chat',
+            target: '/chat.html',
+            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
+          },
+          {
+            source: '/chat/',
+            target: '/chat.html',
+            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
+          },
+        ],
       });
 
       const mainBranch = amplifyApp.addBranch('main', {

@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import * as stepfunctionsTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
@@ -257,6 +258,31 @@ export class YmcaAiStack extends cdk.Stack {
       },
     });
 
+    // Cognito User Pool for Admin Authentication
+    const userPool = new cognito.UserPool(this, 'YmcaAdminUserPool', {
+      userPoolName: 'ymca-admin-user-pool',
+      selfSignUpEnabled: false, // Only admins can create users
+      signInAliases: { email: true },
+      autoVerify: { email: true },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: true,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // For dev; use RETAIN for prod
+    });
+
+    const userPoolClient = userPool.addClient('YmcaAdminUserPoolClient', {
+      userPoolClientName: 'ymca-admin-client',
+      generateSecret: false, // Web clients can't handle secrets
+      authFlows: {
+        userSrp: true,
+      },
+    });
+
     // API Gateway for REST API
     const api = new apigateway.RestApi(this, 'YmcaAiApi', {
       restApiName: 'YMCA AI API',
@@ -447,18 +473,32 @@ export class YmcaAiStack extends cdk.Stack {
       description: 'Step Functions state machine for document processing pipeline',
     });
 
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: userPool.userPoolId,
+      description: 'Cognito User Pool ID for Admin Auth',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      description: 'Cognito User Pool Client ID',
+    });
+
     new cdk.CfnOutput(this, 'PostDeploymentInstructions', {
       value: `
-NEXT STEPS - Create Bedrock Knowledge Base:
-1. Go to AWS Console > Bedrock > Knowledge bases
-2. Create knowledge base with S3 data source
-3. Use bucket: ${documentsBucket.bucketName}
-4. Set S3 prefix to: output/ (processed documents)
-5. Select "Titan Text Embeddings V2" model
-6. Choose "Quick create a new vector store" with S3 Vectors
-7. After creation, update KB_ID in .env file with your Knowledge Base ID
+NEXT STEPS:
+1. Bedrock Knowledge Base:
+   - Go to AWS Console > Bedrock > Knowledge bases
+   - Create knowledge base with S3 data source (Bucket: ${documentsBucket.bucketName}, Prefix: output/)
+   - Select "Titan Text Embeddings V2" model, "Quick create a new vector store"
+   - Update KB_ID in .env file
+
+2. Admin User Setup:
+   - Go to AWS Console > Cognito > User pools > ymca-admin-user-pool
+   - Create a new user (email/password)
+   - Mark email as verified
+   - This user will be able to access the Admin Dashboard
       `,
-      description: 'Post-deployment setup instructions for Bedrock Knowledge Base',
+      description: 'Post-deployment setup instructions',
     });
   }
 

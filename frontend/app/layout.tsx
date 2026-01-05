@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   description: "Ask questions, discover stories, and draw lessons from the past to inspire leadership today.",
 };
 
+import ConfigureAmplify from '@/components/ConfigureAmplify';
 import { ChatProvider } from './context/ChatContext';
 
 export default function RootLayout({
@@ -31,6 +32,7 @@ export default function RootLayout({
           fontFamily: 'Verdana, Geneva, sans-serif'
         }}
       >
+        <ConfigureAmplify />
         <ChatProvider>
           {children}
         </ChatProvider>

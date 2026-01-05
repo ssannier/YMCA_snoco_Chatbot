@@ -517,7 +517,7 @@ export class YmcaAiStack extends cdk.Stack {
           frontend: {
             phases: {
               preBuild: {
-                commands: ['cd frontend', 'npm ci'],
+                commands: ['cd frontend', 'npm install --force'],
               },
               build: {
                 commands: ['cd frontend', 'npm run build'],

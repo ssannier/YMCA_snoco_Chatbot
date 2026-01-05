@@ -526,10 +526,9 @@ export class YmcaAiStack extends cdk.Stack {
           repository: githubRepo,
           oauthToken: githubTokenSecret.secretValue,
         }),
-        platform: amplifyAlpha.Platform.WEB_COMPUTE,
+        platform: amplifyAlpha.Platform.WEB,
         role: amplifyServiceRole,
-        // Let Amplify auto-detect Next.js for WEB_COMPUTE
-        // No custom buildSpec needed
+        // amplify.yml in repo defines the build spec
       });
 
       const mainBranch = amplifyApp.addBranch('main', {
@@ -538,9 +537,8 @@ export class YmcaAiStack extends cdk.Stack {
       });
 
       // Inject Environment Variables into Amplify
-      mainBranch.addEnvironment('NEXT_PUBLIC_API_URL', api.url);
-      mainBranch.addEnvironment('NEXT_PUBLIC_CHAT_ENDPOINT', `${api.url}chat`);
-      mainBranch.addEnvironment('NEXT_PUBLIC_CHAT_STREAM_ENDPOINT', streamingFunctionUrl.url); // Preferred over API GW for streaming
+      mainBranch.addEnvironment('NEXT_PUBLIC_API_ENDPOINT', `${api.url}chat`);
+      mainBranch.addEnvironment('NEXT_PUBLIC_STREAMING_ENDPOINT', streamingFunctionUrl.url);
       mainBranch.addEnvironment('NEXT_PUBLIC_USER_POOL_ID', userPool.userPoolId);
       mainBranch.addEnvironment('NEXT_PUBLIC_USER_POOL_CLIENT_ID', userPoolClient.userPoolClientId);
       mainBranch.addEnvironment('NEXT_PUBLIC_REGION', this.region);

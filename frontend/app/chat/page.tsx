@@ -423,9 +423,15 @@ export default function ChatPage() {
     >
       {/* Header */}
       <div className="content-stretch flex flex-col items-center justify-center px-[100px] py-0 relative shrink-0 w-full">
-        <div className="content-stretch flex items-center px-[24px] py-[24px] relative shrink-0 w-full">
+        <div className="content-stretch flex items-center justify-between px-[24px] py-[24px] relative shrink-0 w-full">
           <Link href="/" className="h-[72px] w-[94.161px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity p-[8px] -m-[8px]">
             <img alt="YMCA Logo" className="w-full h-full object-contain" src="/logo.png" />
+          </Link>
+          <Link
+            href="/"
+            className="bg-[#0089d0] text-white px-[24px] py-[12px] rounded-[100px] font-medium text-[16px] hover:bg-[#0077b8] transition-colors cursor-pointer"
+          >
+            Home
           </Link>
         </div>
       </div>

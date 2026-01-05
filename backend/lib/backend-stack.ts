@@ -498,6 +498,7 @@ export class YmcaAiStack extends cdk.Stack {
     const githubRepo = process.env.GITHUB_REPO;
     // Optional: Only throw if you intend to deploy Amplify. 
     // For now, we'll check if they are present before creating Amplify resources.
+    //make amplify updates
 
     if (githubToken && githubOwner && githubRepo) {
       const githubTokenSecret = new secretsmanager.Secret(this, 'GitHubToken', {

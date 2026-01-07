@@ -41,18 +41,27 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
-  const { sendMessage } = useChat();
+  const [shouldNavigate, setShouldNavigate] = useState(false);
+  const { sendMessage, conversation } = useChat();
 
-  const submitMessage = () => {
-    if (inputValue.trim()) {
+  // Navigate to chat page after message is added to conversation
+  useEffect(() => {
+    if (shouldNavigate && conversation?.messages && conversation.messages.length > 0) {
       // Grant access to chat page
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('chatAccess', 'true');
       }
+      router.push('/chat');
+      setShouldNavigate(false);
+    }
+  }, [shouldNavigate, conversation?.messages, router]);
+
+  const submitMessage = () => {
+    if (inputValue.trim()) {
       // Send the message using the chat hook
       sendMessage(inputValue);
-      // Navigate to chat page
-      router.push('/chat');
+      // Set flag to navigate after message is added
+      setShouldNavigate(true);
       // Clear input
       setInputValue('');
     }
@@ -64,14 +73,10 @@ export default function Home() {
   };
 
   const handleStarterPromptClick = (prompt: string) => {
-    // Grant access to chat page
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('chatAccess', 'true');
-    }
     // Send the message
     sendMessage(prompt);
-    // Navigate to chat page
-    router.push('/chat');
+    // Set flag to navigate after message is added
+    setShouldNavigate(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -71,11 +71,15 @@ export default function FileUpload({ apiEndpoint }: FileUploadProps) {
                 throw new Error('Documents bucket not configured');
             }
 
+            // Convert File to ArrayBuffer for S3 upload
+            const fileBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(fileBuffer);
+
             // Upload file to S3
             const command = new PutObjectCommand({
                 Bucket: bucketName,
                 Key: `input/${fileName}`,
-                Body: file,
+                Body: uint8Array,
                 ContentType: 'application/pdf',
             });
 

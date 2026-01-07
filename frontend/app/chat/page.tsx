@@ -42,6 +42,22 @@ interface MessageBubbleProps {
   onSuggestionClick?: (suggestion: string) => void;
 }
 
+/**
+ * Thinking/Loading Indicator Component
+ */
+const ThinkingIndicator = () => (
+  <div className="flex items-center gap-3 p-2">
+    <div className="flex gap-1">
+      <div className="w-2 h-2 bg-[#0089d0] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+      <div className="w-2 h-2 bg-[#0089d0] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+      <div className="w-2 h-2 bg-[#0089d0] rounded-full animate-bounce"></div>
+    </div>
+    <span className="font-cachet text-[#0089d0] text-sm font-medium animate-pulse">
+      Consulting the archives...
+    </span>
+  </div>
+);
+
 const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
@@ -61,7 +77,10 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
       narrative = narrative.replace(/^\s*\{\s*"[^"]*"\s*:\s*"/g, '');
       narrative = narrative.replace(/^\s*"/g, '');
 
-      if (narrative && narrative !== displayedText) {
+      // Check if we still have JSON artifacts (incomplete stream)
+      const isDirty = narrative.trim().startsWith('{') || narrative.trim().startsWith('"');
+
+      if (!isDirty && narrative && narrative !== displayedText) {
         setIsTyping(true);
 
         // Clear any existing timeout to prevent overlapping loops
@@ -116,7 +135,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
   // Assistant message
   const response = message.content as ChatResponse;
 
-  // For streaming messages, show the typing effect
+  // For streaming messages, show the typing effect OR loading indicator
   if (message.isStreaming) {
     return (
       <div className="bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col items-start overflow-hidden relative rounded-[12px] shrink-0 w-full max-w-[976px]">
@@ -133,9 +152,15 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
             </div>
 
             <div className={cn("font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] w-full prose prose-lg max-w-none")}>
-              <ReactMarkdown>{displayedText}</ReactMarkdown>
-              {isTyping && (
-                <span className="inline-block w-2 h-5 bg-[#0089d0] ml-1 animate-pulse" />
+              {!displayedText ? (
+                <ThinkingIndicator />
+              ) : (
+                <>
+                  <ReactMarkdown>{displayedText}</ReactMarkdown>
+                  {isTyping && (
+                    <span className="inline-block w-2 h-5 bg-[#0089d0] ml-1 animate-pulse" />
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -1,6 +1,5 @@
 version: 1
 # AWS Amplify Build Specification for YMCA Chatbot
-# Note: Amplify auto-detects monorepo structure and builds from frontend/
 
 frontend:
   phases:
@@ -9,6 +8,7 @@ frontend:
         - echo "========================================="
         - echo "Installing Frontend Dependencies"
         - echo "========================================="
+        - cd frontend
         - npm ci
         - echo "Environment Variables Configured"
         - echo "API_ENDPOINT = $NEXT_PUBLIC_API_ENDPOINT"
@@ -20,13 +20,13 @@ frontend:
         - echo "Building Next.js Application"
         - echo "========================================="
         - npm run build
-        - echo "✅ Frontend build completed!"
+        - echo "Frontend build completed successfully"
 
   artifacts:
-    baseDirectory: out
+    baseDirectory: frontend/out
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
-      - .next/cache/**/*
+      - frontend/node_modules/**/*
+      - frontend/.next/cache/**/*

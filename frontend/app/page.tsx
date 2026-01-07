@@ -181,7 +181,7 @@ export default function Home() {
               <h1 className={cn("font-cachet font-bold leading-normal min-w-full relative shrink-0 text-[#231f20] text-[64px] w-[min-content]")}>
                 {t('welcomeTitle')}
               </h1>
-              <p className={cn("font-verdana font-normal leading-[1.5] relative shrink-0 text-[#484848] text-[20px] w-[800px] max-w-full")}>
+              <p className={cn("font-normal leading-[1.5] relative shrink-0 text-[#484848] text-[20px] w-[800px] max-w-full")}>
                 {t('welcomeSubtitle')}
               </p>
             </div>
@@ -206,7 +206,7 @@ export default function Home() {
                           {t('starterCrisisTitle')}
                         </p>
                       </div>
-                      <p className={cn("font-verdana font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
+                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
                         {t('starterCrisisDesc')}
                       </p>
                     </div>
@@ -227,7 +227,7 @@ export default function Home() {
                           {t('starterYouthTitle')}
                         </p>
                       </div>
-                      <p className={cn("font-verdana font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
+                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
                         {t('starterYouthDesc')}
                       </p>
                     </div>
@@ -251,7 +251,7 @@ export default function Home() {
                           {t('starterLeadershipTitle')}
                         </p>
                       </div>
-                      <p className={cn("font-verdana font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
+                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
                         {t('starterLeadershipDesc')}
                       </p>
                     </div>
@@ -272,7 +272,7 @@ export default function Home() {
                           {t('starterInnovationTitle')}
                         </p>
                       </div>
-                      <p className={cn("font-verdana font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
+                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
                         {t('starterInnovationDesc')}
                       </p>
                     </div>

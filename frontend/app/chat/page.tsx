@@ -132,7 +132,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
               </p>
             </div>
 
-            <div className={cn("font-verdana font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] w-full prose prose-lg max-w-none")}>
+            <div className={cn("font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] w-full prose prose-lg max-w-none")}>
               <ReactMarkdown>{displayedText}</ReactMarkdown>
               {isTyping && (
                 <span className="inline-block w-2 h-5 bg-[#0089d0] ml-1 animate-pulse" />
@@ -165,7 +165,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                 </p>
               </div>
 
-              <div className={cn("font-verdana font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] w-full prose prose-lg max-w-none")}>
+              <div className={cn("font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] w-full prose prose-lg max-w-none")}>
                 <ReactMarkdown>{story.narrative}</ReactMarkdown>
               </div>
             </div>
@@ -223,7 +223,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                   Why It Mattered
                 </p>
               </div>
-              <div className={cn("font-verdana font-normal leading-[28px] not-italic text-[#231f20] text-[18px] prose prose-lg max-w-none")}>
+              <div className={cn("font-normal leading-[28px] not-italic text-[#231f20] text-[18px] prose prose-lg max-w-none")}>
                 <ReactMarkdown>{story.whyItMatters}</ReactMarkdown>
               </div>
             </div>
@@ -246,7 +246,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                     <div className={cn("content-stretch flex items-center px-0 py-[8px] relative shrink-0")}>
                       <div className={cn("bg-[#F47920] rounded-[100px] shrink-0 size-[8px]")} />
                     </div>
-                    <p className={cn("font-verdana font-normal leading-[28px] not-italic text-[#231f20] text-[18px]")}>
+                    <p className={cn("font-normal leading-[28px] not-italic text-[#231f20] text-[18px]")}>
                       {lesson}
                     </p>
                   </div>
@@ -267,7 +267,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                     What this moment teaches us today
                   </p>
                 </div>
-                <div className={cn("font-verdana font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] prose prose-lg max-w-none")}>
+                <div className={cn("font-normal leading-[28px] not-italic relative shrink-0 text-[#231f20] text-[18px] prose prose-lg max-w-none")}>
                   <ReactMarkdown>{modernReflection}</ReactMarkdown>
                 </div>
               </div>
@@ -302,12 +302,12 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                         <p className={cn("font-cachet font-medium leading-[20px] not-italic text-[#231f20] text-[14px]")}>
                           {source.title}
                         </p>
-                        <p className={cn("font-verdana font-normal leading-[18px] not-italic text-[#636466] text-[12px]")}>
+                        <p className={cn("font-normal leading-[18px] not-italic text-[#636466] text-[12px]")}>
                           {source.source}
                         </p>
                       </div>
                       {source.excerpt && (
-                        <p className={cn("font-verdana font-normal leading-[20px] not-italic text-[#231f20] text-[14px]")}>
+                        <p className={cn("font-normal leading-[20px] not-italic text-[#231f20] text-[14px]")}>
                           {source.excerpt}
                         </p>
                       )}
@@ -316,7 +316,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
                           href={source.sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={cn("font-verdana font-medium leading-[18px] not-italic text-[#0089d0] text-[12px] hover:underline cursor-pointer")}
+                          className={cn("font-medium leading-[18px] not-italic text-[#0089d0] text-[12px] hover:underline cursor-pointer")}
                         >
                           View Source
                         </a>

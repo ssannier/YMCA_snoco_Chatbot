@@ -1,13 +1,30 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+
 import "./globals.css";
 
-// Load Montserrat as a substitute for Cachet (similar geometric sans-serif)
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-montserrat",
-  display: "swap",
+import localFont from "next/font/local";
+import "./globals.css";
+
+const cachet = localFont({
+  src: [
+    {
+      path: '../Cachet Std Book.otf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../Cachet Std Medium.otf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../Cachet Std Bold.otf',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-cachet',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -26,10 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${montserrat.variable} font-verdana antialiased`}
-        style={{
-          fontFamily: 'Verdana, Geneva, sans-serif'
-        }}
+        className={`${cachet.variable} font-sans antialiased`}
       >
         <ConfigureAmplify />
         <ChatProvider>

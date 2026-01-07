@@ -5,30 +5,31 @@
   --background: #ffffff;
   --foreground: #231f20;
   --font-verdana: Verdana, Geneva, 'DejaVu Sans', sans-serif;
+  /* --font-cachet is defined in layout.tsx via next/font/local */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-verdana);
-  --font-heading: var(--font-montserrat);
+  --font-sans: var(--font-cachet);
+  --font-heading: var(--font-cachet);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-verdana);
+  font-family: var(--font-cachet);
 }
 
-/* Heading styles using Montserrat (Cachet substitute) */
+/* Heading styles using Cachet (Primary) */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-montserrat), 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-cachet), sans-serif;
   font-weight: 700;
 }
 
 /* Utility classes for font families */
 .font-cachet {
-  font-family: var(--font-montserrat), 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-cachet), sans-serif;
 }
 
 .font-verdana {

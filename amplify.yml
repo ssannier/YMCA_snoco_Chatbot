@@ -10,13 +10,9 @@ frontend:
         - echo "Installing Frontend Dependencies"
         - echo "========================================="
         - npm ci
-
-        # Display environment variables (for debugging)
-        - echo "Environment Variables:"
-        - echo "  API_ENDPOINT: $NEXT_PUBLIC_API_ENDPOINT"
-        - echo "  STREAMING_ENDPOINT: $NEXT_PUBLIC_STREAMING_ENDPOINT"
-        - echo "  USER_POOL_ID: $NEXT_PUBLIC_USER_POOL_ID"
-        - echo "  REGION: $NEXT_PUBLIC_REGION"
+        - echo "Environment Variables Configured"
+        - echo "API_ENDPOINT = $NEXT_PUBLIC_API_ENDPOINT"
+        - echo "USER_POOL_ID = $NEXT_PUBLIC_USER_POOL_ID"
 
     build:
       commands:

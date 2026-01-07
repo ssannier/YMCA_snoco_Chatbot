@@ -29,9 +29,10 @@ export class YmcaAiStack extends cdk.Stack {
     // input/ - stores initial documents uploaded for processing
     // output/ - stores processed output from textract pipeline (used by Bedrock Knowledge Base)
     const documentsBucket = new s3.Bucket(this, 'YmcaDocumentsBucket', {
-      bucketName: process.env.DOCUMENTS_BUCKET || `ymca-documents-${this.account}-${this.region}-${Date.now()}`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
+      // Use a static name to prevent replacement on updates (removed Date.now())
+      bucketName: process.env.DOCUMENTS_BUCKET || `ymca-documents-${this.account}-${this.region}`,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      autoDeleteObjects: false,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
@@ -135,7 +136,7 @@ export class YmcaAiStack extends cdk.Stack {
       partitionKey: { name: 'conversationId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     const analyticsTable = new dynamodb.Table(this, 'YmcaAnalyticsTable', {
@@ -143,7 +144,7 @@ export class YmcaAiStack extends cdk.Stack {
       partitionKey: { name: 'queryId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // IAM Role for Lambda functions (excluding batch processor)

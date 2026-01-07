@@ -32,7 +32,7 @@ interface ChatProviderProps {
 
 export const ChatProvider = ({ children }: ChatProviderProps) => {
   const [conversation, setConversation] = useState<Conversation | null>(() => {
-    // Initialize with a new conversation (localStorage restoration happens in useEffect below)
+    // Initialize with a new conversation
     return {
       id: generateSessionId(),
       sessionId: generateSessionId(),
@@ -45,42 +45,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Restore conversation from localStorage on client-side mount only
-  useEffect(() => {
-    if (!isHydrated) {
-      try {
-        const saved = localStorage.getItem('ymca-conversation');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setConversation({
-            ...parsed,
-            createdAt: new Date(parsed.createdAt),
-            updatedAt: new Date(parsed.updatedAt),
-            messages: parsed.messages.map((msg: any) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp),
-            })),
-          });
-        }
-      } catch (e) {
-        console.error('Failed to restore conversation:', e);
-      }
-      setIsHydrated(true);
-    }
-  }, [isHydrated]);
-
-  // Persist conversation to localStorage whenever it changes (only after hydration)
-  useEffect(() => {
-    if (isHydrated && conversation) {
-      try {
-        localStorage.setItem('ymca-conversation', JSON.stringify(conversation));
-      } catch (e) {
-        console.error('Failed to save conversation:', e);
-      }
-    }
-  }, [conversation, isHydrated]);
 
   const addUserMessage = useCallback((content: string): string => {
     const messageId = generateMessageId();
@@ -221,11 +185,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     };
     setConversation(newConversation);
     setError(null);
-
-    // Clear from localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('ymca-conversation');
-    }
   }, [conversation?.language]);
 
   const setLanguage = useCallback((language: string) => {

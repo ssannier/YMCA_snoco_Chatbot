@@ -436,7 +436,7 @@ YMCA_Scono_chatbot/
 
 ## Credits
 
-This application was developed by the Arizona State University Center for Innovation and Creativity (ASUCIC) team.
+This application was developed by the Arizona State University Cloud Innovation Center (ASU CIC) team.
 
 **Contributors:**
 - Aarav Matalia: https://www.linkedin.com/in/aarav-matalia/
@@ -456,10 +456,8 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ## Support
 
-For issues, questions, or contributions:
-- **GitHub Issues**: [https://github.com/ASUCICREPO/YMCA_snoco_Chatbot/issues](https://github.com/ASUCICREPO/YMCA_snoco_Chatbot/issues)
+For questions:
 - **Documentation**: See the `docs/` folder for comprehensive guides
-- **Email**: [Add contact email if applicable]
 
 ---
 

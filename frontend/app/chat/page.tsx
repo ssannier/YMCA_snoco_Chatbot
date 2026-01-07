@@ -9,6 +9,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -339,7 +340,7 @@ const MessageBubble = ({ message, onSuggestionClick }: MessageBubbleProps) => {
 };
 
 // Starter prompts data with translation keys
-const getStarterPrompts = (t: TFunction) => [
+const getStarterPrompts = () => [
   {
     id: 'crisis',
     titleKey: 'starterCrisisTitle',
@@ -425,7 +426,7 @@ export default function ChatPage() {
       <div className="content-stretch flex flex-col items-center justify-center px-[100px] py-0 relative shrink-0 w-full">
         <div className="content-stretch flex items-center justify-between px-[24px] py-[24px] relative shrink-0 w-full">
           <Link href="/" className="h-[72px] w-[94.161px] relative shrink-0 cursor-pointer hover:opacity-80 transition-opacity p-[8px] -m-[8px]">
-            <img alt="YMCA Logo" className="w-full h-full object-contain" src="/logo.png" />
+            <Image alt="YMCA Logo" className="object-contain" src="/logo.png" fill />
           </Link>
           <Link
             href="/"
@@ -457,7 +458,7 @@ export default function ChatPage() {
               <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
                 {/* First Row */}
                 <div className="content-stretch flex gap-[24px] items-start relative shrink-0 w-full">
-                  {getStarterPrompts(t).slice(0, 2).map((prompt) => {
+                  {getStarterPrompts().slice(0, 2).map((prompt) => {
                     const IconComponent = prompt.icon;
                     return (
                       <button
@@ -488,7 +489,7 @@ export default function ChatPage() {
 
                 {/* Second Row */}
                 <div className="content-stretch flex gap-[24px] items-start relative shrink-0 w-full">
-                  {getStarterPrompts(t).slice(2, 4).map((prompt) => {
+                  {getStarterPrompts().slice(2, 4).map((prompt) => {
                     const IconComponent = prompt.icon;
                     return (
                       <button

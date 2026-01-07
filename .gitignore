@@ -58,3 +58,4 @@ yarn-error.log*
 
 # Temporarily untracked Lambda functions
 backend/lambda/textract-multimodal-processor/
+outputs.json

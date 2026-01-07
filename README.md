@@ -51,29 +51,34 @@ For a detailed explanation of the architecture, see the [Architecture Deep Dive]
 
 For complete deployment instructions, see the [Deployment Guide](./docs/deploymentGuide.md).
 
-**One-Command Deployment (CloudShell Ready):**
+**🚀 One-Command Automated Deployment:**
 ```bash
-# Clone and deploy everything in one go
+# Clone and deploy everything automatically
 git clone <repository-url>
 cd YMCA_AI_Chatbot/backend
-./scripts/deploy.sh --auto
+./scripts/deploy.sh --auto --admin-email your-admin@email.com
 ```
 
-**What the deployment script does:**
-1. ✅ **CDK Infrastructure**: Deploys Step Functions, Lambda, S3, DynamoDB, API Gateway
-2. ✅ **Document Processing**: Textract pipeline saves processed text to S3 `output/` folder
-3. ✅ **Bedrock Ready**: Infrastructure ready for Knowledge Base creation (post-deployment)
-4. ✅ **Cost Optimization**: Uses Bedrock's managed S3 Vectors (no separate vector storage costs)
+**What the automated deployment does:**
+1. ✅ **CDK Infrastructure**: Deploys Step Functions, Lambda, S3, DynamoDB, API Gateway, Cognito
+2. ✅ **Document Processing**: Complete Textract pipeline with S3 integration
+3. ✅ **Bedrock Knowledge Base**: Automatically creates and configures with S3 data source
+4. ✅ **Admin User Setup**: Creates Cognito admin user with provided email
+5. ✅ **Lambda Configuration**: Updates environment variables with Knowledge Base ID
+6. ✅ **Cost Optimization**: Uses Bedrock's managed S3 Vectors (90% cost savings)
 
 **Deployment Options:**
 ```bash
-# Interactive deployment (default) - automated infrastructure setup
+# Fully automated deployment (recommended)
+./scripts/deploy.sh --auto --admin-email admin@ymca.org
+
+# Interactive deployment with prompts
 ./scripts/deploy.sh
 
-# Auto-deploy everything without prompts
-./scripts/deploy.sh --auto
+# Skip specific components
+./scripts/deploy.sh --skip-kb --skip-cognito
 
-# Help
+# Get help
 ./scripts/deploy.sh --help
 ```
 
@@ -84,52 +89,45 @@ cd YMCA_AI_Chatbot/backend
 
 **CloudShell Ready:** The script works perfectly in AWS CloudShell with no additional setup required!
 
+**🧹 Cleanup:**
+```bash
+# Remove all resources (with confirmation prompts)
+./scripts/cleanup.sh
+
+# Force cleanup without prompts
+./scripts/cleanup.sh --force
+
+# Keep S3 data during cleanup
+./scripts/cleanup.sh --keep-data
+```
+
+**🔍 Validation:**
+```bash
+# Validate deployed infrastructure
+./scripts/validate.sh
+```
+
 ---
 
-## Post-Deployment Setup: Bedrock Knowledge Base
+## ✨ What's New - Fully Automated Deployment
 
-After deploying the infrastructure, you need to create the Bedrock Knowledge Base to enable AI-powered document search and chat functionality.
+The YMCA AI system now features **100% automated deployment** with zero manual steps required! 
 
-### Step 1: Create Knowledge Base
+**🎯 One Command Does Everything:**
+- ✅ Deploys complete AWS infrastructure via CDK
+- ✅ **Automatically creates Bedrock Knowledge Base** with S3 data source
+- ✅ **Automatically sets up Cognito admin user** with your email
+- ✅ **Automatically configures Lambda environment variables**
+- ✅ Provides cleanup scripts for easy resource removal
 
-**💡 Pro Tip**: Keep the deployment outputs handy as you'll need the vector store bucket name multiple times during setup.
+**Before vs After:**
+- **Before**: 2 manual steps (Knowledge Base + Cognito setup)
+- **After**: 0 manual steps - everything automated!
 
-1. **Navigate to Bedrock Knowledge Bases**:
-   - Open the AWS Console
-   - Search for "Bedrock" and select "Amazon Bedrock"
-   - On the left sidebar, click on "Knowledge bases"
-
-2. **Create New Knowledge Base**:
-   - Click "Create knowledge base"
-   - Select "Knowledge base with vector store"
-   - Enter your knowledge base name (e.g., "ymca-ai-knowledge-base")
-   - Set data source type to "S3"
-   - Click "Next"
-
-3. **Configure S3 Data Source**:
-   - Browse S3 buckets and find your documents bucket
-   - **Use the DocumentsBucketName from your deployment outputs**
-   - Select the `ymca-documents-[account]-[region]` bucket
-   - Set the prefix to `output/` (where processed documents are stored)
-   - Click "Next"
-
-4. **Configure Embeddings Model**:
-   - Select embeddings model: "Titan Text Embeddings V2"
-   - Choose "Quick create a new vector store"
-   - Click "S3 Vectors"
-   - Click "Next"
-   - Click "Create knowledge base"
-
-### Step 2: Update Lambda Configuration
-
-After creating the Knowledge Base, update your agent-proxy Lambda function with the Knowledge Base ID:
-
-1. Navigate to AWS Lambda console
-2. Find the `ymca-agent-proxy` function
-3. Add environment variable: `KNOWLEDGE_BASE_ID` with your Knowledge Base ID
-4. Save the configuration
-
-**Note**: The Knowledge Base will automatically sync with documents processed through the Textract pipeline and stored in the vector store bucket.
+```bash
+# Deploy everything with one command
+./scripts/deploy.sh --auto --admin-email admin@ymca.org
+```
 
 ---
 

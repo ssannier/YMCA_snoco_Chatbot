@@ -14,8 +14,9 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as amplifyAlpha from '@aws-cdk/aws-amplify-alpha';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId } from 'aws-cdk-lib/custom-resources';
+import { Bucket, Index } from 'cdk-s3-vectors';
+import { CfnKnowledgeBase, CfnDataSource } from 'aws-cdk-lib/aws-bedrock';
 
 // Load environment variables from backend/.env
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -28,12 +29,104 @@ export class YmcaAiStack extends cdk.Stack {
     // input/ - stores initial documents uploaded for processing
     // output/ - stores processed output from textract pipeline (used by Bedrock Knowledge Base)
     const documentsBucket = new s3.Bucket(this, 'YmcaDocumentsBucket', {
-      bucketName: process.env.DOCUMENTS_BUCKET || `ymca-documents-${this.account}-${this.region}`,
+      bucketName: process.env.DOCUMENTS_BUCKET || `ymca-documents-${this.account}-${this.region}-${Date.now()}`,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
+    });
+
+    // ========================================================================
+    // S3 VECTORS AND BEDROCK KNOWLEDGE BASE
+    // ========================================================================
+
+    // Create S3 Vectors bucket and index
+    const vectorsBucket = new Bucket(this, 'YmcaVectorsBucket', {
+      vectorBucketName: `ymca-vectors-${this.account}-${this.region}`,
+    });
+
+    const vectorIndex = new Index(this, 'YmcaVectorIndex', {
+      vectorBucketName: vectorsBucket.vectorBucketName,
+      indexName: 'ymca-vector-index',
+      dimension: 1024, // Titan Text Embeddings V2 dimension
+      distanceMetric: 'cosine',
+      dataType: 'float32',
+      metadataConfiguration: {
+        nonFilterableMetadataKeys: [
+          'AMAZON_BEDROCK_TEXT',
+          'AMAZON_BEDROCK_METADATA',
+        ]
+      }
+    });
+
+    // Create IAM role for Bedrock Knowledge Base
+    const knowledgeBaseRole = new iam.Role(this, 'YmcaKnowledgeBaseRole', {
+      assumedBy: new iam.ServicePrincipal('bedrock.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3ReadOnlyAccess'),
+      ],
+    });
+
+    // Grant S3 Vectors permissions
+    knowledgeBaseRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['s3vectors:*'],
+      resources: ['*'],
+    }));
+
+    // Grant Bedrock model invocation permissions
+    knowledgeBaseRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['bedrock:InvokeModel'],
+      resources: [
+        `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`
+      ],
+    }));
+
+    // Grant access to documents bucket
+    documentsBucket.grantRead(knowledgeBaseRole);
+
+    // Create Bedrock Knowledge Base
+    const knowledgeBase = new CfnKnowledgeBase(this, 'YmcaKnowledgeBase', {
+      name: 'ymca-knowledge-base',
+      roleArn: knowledgeBaseRole.roleArn,
+      knowledgeBaseConfiguration: {
+        type: 'VECTOR',
+        vectorKnowledgeBaseConfiguration: {
+          embeddingModelArn: `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+        },
+      },
+      storageConfiguration: {
+        type: 'S3_VECTORS',
+        s3VectorsConfiguration: {
+          indexArn: vectorIndex.indexArn,
+          vectorBucketArn: vectorsBucket.vectorBucketArn, // Use the correct property from the construct
+        },
+      },
+    });
+
+    // Create data source for the Knowledge Base
+    const dataSource = new CfnDataSource(this, 'YmcaKnowledgeBaseDataSource', {
+      knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
+      name: 'ymca-s3-documents',
+      dataSourceConfiguration: {
+        type: 'S3',
+        s3Configuration: {
+          bucketArn: documentsBucket.bucketArn,
+          inclusionPrefixes: ['output/processed-text/']
+        },
+      },
+      vectorIngestionConfiguration: {
+        chunkingConfiguration: {
+          chunkingStrategy: 'FIXED_SIZE',
+          fixedSizeChunkingConfiguration: {
+            maxTokens: 525,
+            overlapPercentage: 15,
+          },
+        },
+      },
+      dataDeletionPolicy: 'RETAIN',
     });
 
     // DynamoDB Tables for analytics and conversation tracking
@@ -103,7 +196,7 @@ export class YmcaAiStack extends cdk.Stack {
               ],
               resources: ['*'],
             }),
-            // Bedrock permissions - for foundation models (all regions) and inference profiles
+            // Bedrock permissions - for foundation models and inference profiles
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
               actions: [
@@ -111,7 +204,8 @@ export class YmcaAiStack extends cdk.Stack {
                 'bedrock:InvokeModelWithResponseStream',
               ],
               resources: [
-                `arn:aws:bedrock:*::foundation-model/*`, // Allow cross-region routing
+                `arn:aws:bedrock:${this.region}::foundation-model/*`, // Region-specific foundation models
+                `arn:aws:bedrock:us-west-2::foundation-model/*`, // Cross-region for us-west-2 models
                 `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`,
               ],
             }),
@@ -530,30 +624,7 @@ export class YmcaAiStack extends cdk.Stack {
         }),
         platform: amplifyAlpha.Platform.WEB,
         role: amplifyServiceRole,
-        customRules: [
-          // Handle admin routes - try exact match first
-          {
-            source: '/admin',
-            target: '/admin.html',
-            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
-          },
-          {
-            source: '/admin/',
-            target: '/admin.html',
-            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
-          },
-          // Handle chat routes
-          {
-            source: '/chat',
-            target: '/chat.html',
-            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
-          },
-          {
-            source: '/chat/',
-            target: '/chat.html',
-            status: amplifyAlpha.RedirectStatus.PERMANENT_REDIRECT,
-          },
-        ],
+        // No custom rules needed - Next.js static export handles routing
       });
 
       const mainBranch = amplifyApp.addBranch('main', {
@@ -609,27 +680,21 @@ export class YmcaAiStack extends cdk.Stack {
       });
     }
 
-    new cdk.CfnOutput(this, 'PostDeploymentInstructions', {
-      value: `
-NEXT STEPS:
-1. Bedrock Knowledge Base:
-   - Go to AWS Console > Bedrock > Knowledge bases
-   - Create knowledge base with S3 data source (Bucket: ${documentsBucket.bucketName}, Prefix: output/)
-   - Select "Titan Text Embeddings V2" model, "Quick create a new vector store"
-   - Update KB_ID in .env file
+//     new cdk.CfnOutput(this, 'PostDeploymentInstructions', {
+//       value: `
 
-2. Admin User Setup:
-   - Go to AWS Console > Cognito > User pools > ymca-admin-user-pool
-   - Create a new user (email/password)
-   - Mark email as verified
-   - This user will be able to access the Admin Dashboard
+// 2. Admin User Setup:
+//    - Go to AWS Console > Cognito > User pools > ymca-admin-user-pool
+//    - Create a new user (email/password)
+//    - Mark email as verified
+//    - This user will be able to access the Admin Dashboard
 
-3. GitHub Configuration (for Amplify):
-   - Ensure GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO are set in backend/.env
-   - GITHUB_TOKEN must be a Personal Access Token with 'repo' and 'admin:repo_hook' scopes
-      `,
-      description: 'Post-deployment setup instructions',
-    });
+// 3. GitHub Configuration (for Amplify):
+//    - Ensure GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO are set in backend/.env
+//    - GITHUB_TOKEN must be a Personal Access Token with 'repo' and 'admin:repo_hook' scopes
+//       `,
+//       description: 'Post-deployment setup instructions',
+//     });
   }
 
   private createDocumentProcessingWorkflow(

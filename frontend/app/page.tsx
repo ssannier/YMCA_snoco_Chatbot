@@ -98,7 +98,7 @@ export default function Home() {
       <div className={cn("content-stretch flex flex-col items-center justify-center px-[100px] py-0 relative shrink-0 w-full")}>
         <div className={cn("content-stretch flex items-center justify-between px-[24px] py-[24px] relative shrink-0 w-full")}>
           <div className={cn("h-[72px] w-[94.161px] relative shrink-0")}>
-            <img alt="YMCA Logo" className="w-full h-full object-contain" src={ymcaLogo} />
+            <Image alt="YMCA Logo" className="object-contain" src={ymcaLogo} fill />
           </div>
           <div className="relative language-selector">
             <button

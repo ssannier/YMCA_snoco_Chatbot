@@ -415,6 +415,9 @@ export class YmcaAiStack extends cdk.Stack {
     analyticsTable.grantReadData(authenticatedRole);
     conversationTable.grantReadData(authenticatedRole);
 
+    // Grant S3 write access to authenticated users for document uploads
+    documentsBucket.grantPut(authenticatedRole, 'input/*');
+
     // Attach role to identity pool
     new cognito.CfnIdentityPoolRoleAttachment(this, 'YmcaIdentityPoolRoleAttachment', {
       identityPoolId: identityPool.ref,
@@ -493,7 +496,19 @@ export class YmcaAiStack extends cdk.Stack {
     });
 
     // Document upload endpoint
-    const uploadResource = api.root.addResource('upload');
+    const uploadResource = api.root.addResource('upload', {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: ['PUT', 'OPTIONS'],
+        allowHeaders: [
+          'Content-Type',
+          'X-Amz-Date',
+          'Authorization',
+          'X-Api-Key',
+          'X-Amz-Security-Token',
+        ],
+      },
+    });
     const uploadIntegration = new apigateway.AwsIntegration({
       service: 's3',
       integrationHttpMethod: 'PUT',
@@ -528,7 +543,19 @@ export class YmcaAiStack extends cdk.Stack {
       },
     });
 
-    const keyResource = uploadResource.addResource('{key}');
+    const keyResource = uploadResource.addResource('{key}', {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: ['PUT', 'OPTIONS'],
+        allowHeaders: [
+          'Content-Type',
+          'X-Amz-Date',
+          'Authorization',
+          'X-Api-Key',
+          'X-Amz-Security-Token',
+        ],
+      },
+    });
     keyResource.addMethod('PUT', uploadIntegration, {
       requestParameters: {
         'method.request.path.key': true,
@@ -689,6 +716,7 @@ export class YmcaAiStack extends cdk.Stack {
       mainBranch.addEnvironment('NEXT_PUBLIC_AWS_REGION', this.region);
       mainBranch.addEnvironment('NEXT_PUBLIC_ANALYTICS_TABLE_NAME', analyticsTable.tableName);
       mainBranch.addEnvironment('NEXT_PUBLIC_CONVERSATION_TABLE_NAME', conversationTable.tableName);
+      mainBranch.addEnvironment('NEXT_PUBLIC_DOCUMENTS_BUCKET', documentsBucket.bucketName);
 
       githubTokenSecret.grantRead(amplifyApp);
 

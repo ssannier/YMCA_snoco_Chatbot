@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 interface FileUploadProps {
     apiEndpoint: string;
@@ -48,42 +50,42 @@ export default function FileUpload({ apiEndpoint }: FileUploadProps) {
 
         try {
             setUploadStatus(prev => ({ ...prev, [file.name]: 'uploading' }));
+            setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
 
-            const uploadUrl = `${apiEndpoint}/upload/${encodeURIComponent(fileName)}`;
+            // Get Cognito credentials
+            const session = await fetchAuthSession();
+            const credentials = session.credentials;
 
-            const xhr = new XMLHttpRequest();
+            if (!credentials) {
+                throw new Error('Not authenticated');
+            }
 
-            return new Promise<void>((resolve, reject) => {
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = (e.loaded / e.total) * 100;
-                        setUploadProgress(prev => ({ ...prev, [file.name]: percentComplete }));
-                    }
-                });
-
-                xhr.addEventListener('load', () => {
-                    if (xhr.status === 200) {
-                        setUploadStatus(prev => ({ ...prev, [file.name]: 'success' }));
-                        setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-                        resolve();
-                    } else {
-                        setUploadStatus(prev => ({ ...prev, [file.name]: 'error' }));
-                        setErrorMessages(prev => ({ ...prev, [file.name]: `Upload failed: ${xhr.statusText}` }));
-                        reject(new Error(xhr.statusText));
-                    }
-                });
-
-                xhr.addEventListener('error', () => {
-                    setUploadStatus(prev => ({ ...prev, [file.name]: 'error' }));
-                    setErrorMessages(prev => ({ ...prev, [file.name]: 'Network error occurred' }));
-                    reject(new Error('Network error'));
-                });
-
-                xhr.open('PUT', uploadUrl);
-                xhr.setRequestHeader('Content-Type', 'application/pdf');
-                xhr.send(file);
+            // Create S3 client with Cognito credentials
+            const s3Client = new S3Client({
+                region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-west-2',
+                credentials: credentials,
             });
+
+            const bucketName = process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET;
+            if (!bucketName) {
+                throw new Error('Documents bucket not configured');
+            }
+
+            // Upload file to S3
+            const command = new PutObjectCommand({
+                Bucket: bucketName,
+                Key: `input/${fileName}`,
+                Body: file,
+                ContentType: 'application/pdf',
+            });
+
+            setUploadProgress(prev => ({ ...prev, [file.name]: 50 }));
+            await s3Client.send(command);
+
+            setUploadStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
         } catch (error) {
+            console.error('Upload error:', error);
             setUploadStatus(prev => ({ ...prev, [file.name]: 'error' }));
             setErrorMessages(prev => ({ ...prev, [file.name]: error instanceof Error ? error.message : 'Unknown error' }));
             throw error;

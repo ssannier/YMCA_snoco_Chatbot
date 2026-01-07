@@ -6,7 +6,7 @@ An intelligent document processing and multilingual chatbot system designed for 
 
 ## Visual Demo
 
-![YMCA AI Architecture](./docs/media/ymca_updated_arch.png)
+![YMCA AI Architecture](./docs/media/arch.png)
 
 > **Architecture Overview**: The system uses AWS serverless architecture with Step Functions orchestrating document processing, Textract for OCR, Bedrock Knowledge Base for RAG, and a Next.js frontend deployed via Amplify.
 
@@ -439,7 +439,8 @@ YMCA_Scono_chatbot/
 This application was developed by the Arizona State University Center for Innovation and Creativity (ASUCIC) team.
 
 **Contributors:**
-- [Add contributor names and LinkedIn profiles]
+- Aarav Matalia: https://www.linkedin.com/in/aarav-matalia/
+- Ashik Mathew Tharakan: https://www.linkedin.com/in/ashik-tharakan/
 
 **Special Thanks:**
 - YMCA of Snohomish County for project collaboration

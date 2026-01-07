@@ -188,96 +188,82 @@ export default function Home() {
 
             {/* Topic Cards */}
             <div className="content-stretch flex flex-col items-center justify-center relative shrink-0 w-full">
-              <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
-                {/* First Row */}
-                <div className="content-stretch flex gap-[24px] items-start max-w-[1200px] relative shrink-0 w-full">
-                  {/* Card 1 - Crisis */}
-                  <button
-                    type="button"
-                    onClick={() => handleStarterPromptClick('Tell me about how the YMCA responded during times of crisis in history')}
-                    className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex grow items-center min-h-px min-w-px px-[16px] py-[16px] relative rounded-[12px] shrink-0 hover:border-[#EE3124] transition-colors cursor-pointer")}
-                  >
-                    <div className={cn("basis-0 content-stretch flex flex-col gap-[12px] grow items-start min-h-px min-w-px relative shrink-0")}>
-                      <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0 w-full")}>
-                        <div className="relative shrink-0 size-[40px]">
-                          <ShieldIcon />
-                        </div>
-                        <p className={cn("font-cachet basis-0 font-medium grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
-                          {t('starterCrisisTitle')}
-                        </p>
-                      </div>
-                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
-                        {t('starterCrisisDesc')}
-                      </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-[24px] w-full max-w-[960px] items-stretch">
+                {/* Card 1 - Crisis */}
+                <button
+                  type="button"
+                  onClick={() => handleStarterPromptClick('Tell me about how the YMCA responded during times of crisis in history')}
+                  className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-center p-[24px] relative rounded-[12px] hover:border-[#EE3124] transition-colors cursor-pointer h-full gap-[12px]")}
+                >
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full")}>
+                    <div className="relative shrink-0 size-[40px] text-[#EE3124]">
+                      <ShieldIcon />
                     </div>
-                  </button>
+                    <p className={cn("font-cachet font-medium leading-[20px] not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
+                      {t('starterCrisisTitle')}
+                    </p>
+                  </div>
+                  <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full text-center")}>
+                    {t('starterCrisisDesc')}
+                  </p>
+                </button>
 
-                  {/* Card 2 - Youth Programs */}
-                  <button
-                    type="button"
-                    onClick={() => handleStarterPromptClick('How did YMCA youth programs evolve through the decades?')}
-                    className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col grow items-start min-h-px min-w-px relative rounded-[12px] shrink-0 hover:border-[#00AEEF] transition-colors cursor-pointer")}
-                  >
-                    <div className={cn("content-stretch flex flex-col gap-[12px] items-start p-[16px] relative shrink-0 w-full")}>
-                      <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0 w-full")}>
-                        <div className="relative shrink-0 size-[40px]">
-                          <SparklesIcon />
-                        </div>
-                        <p className={cn("font-cachet basis-0 font-medium grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
-                          {t('starterYouthTitle')}
-                        </p>
-                      </div>
-                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
-                        {t('starterYouthDesc')}
-                      </p>
+                {/* Card 2 - Youth Programs */}
+                <button
+                  type="button"
+                  onClick={() => handleStarterPromptClick('How did YMCA youth programs evolve through the decades?')}
+                  className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-center p-[24px] relative rounded-[12px] hover:border-[#00AEEF] transition-colors cursor-pointer h-full gap-[12px]")}
+                >
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full")}>
+                    <div className="relative shrink-0 size-[40px] text-[#00AEEF]">
+                      <SparklesIcon />
                     </div>
-                  </button>
-                </div>
+                    <p className={cn("font-cachet font-medium leading-[20px] not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
+                      {t('starterYouthTitle')}
+                    </p>
+                  </div>
+                  <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full text-center")}>
+                    {t('starterYouthDesc')}
+                  </p>
+                </button>
 
-                {/* Second Row */}
-                <div className="content-stretch flex gap-[24px] items-start max-w-[1200px] relative shrink-0 w-full">
-                  {/* Card 3 - Leadership */}
-                  <button
-                    type="button"
-                    onClick={() => handleStarterPromptClick('Share stories about YMCA leadership and social responsibility')}
-                    className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col grow items-start min-h-px min-w-px relative rounded-[12px] shrink-0 hover:border-[#92278F] transition-colors cursor-pointer")}
-                  >
-                    <div className={cn("content-stretch flex flex-col gap-[12px] items-start p-[16px] relative shrink-0 w-full")}>
-                      <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0 w-full")}>
-                        <div className="relative shrink-0 size-[40px]">
-                          <UsersIcon />
-                        </div>
-                        <p className={cn("font-cachet basis-0 font-medium grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
-                          {t('starterLeadershipTitle')}
-                        </p>
-                      </div>
-                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
-                        {t('starterLeadershipDesc')}
-                      </p>
+                {/* Card 3 - Leadership */}
+                <button
+                  type="button"
+                  onClick={() => handleStarterPromptClick('Share stories about YMCA leadership and social responsibility')}
+                  className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-center p-[24px] relative rounded-[12px] hover:border-[#92278F] transition-colors cursor-pointer h-full gap-[12px]")}
+                >
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full")}>
+                    <div className="relative shrink-0 size-[40px] text-[#92278F]">
+                      <UsersIcon />
                     </div>
-                  </button>
+                    <p className={cn("font-cachet font-medium leading-[20px] not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
+                      {t('starterLeadershipTitle')}
+                    </p>
+                  </div>
+                  <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full text-center")}>
+                    {t('starterLeadershipDesc')}
+                  </p>
+                </button>
 
-                  {/* Card 4 - Innovation */}
-                  <button
-                    type="button"
-                    onClick={() => handleStarterPromptClick('What innovations did the YMCA introduce throughout its history?')}
-                    className={cn("basis-0 bg-white border border-[#d1d5dc] border-solid content-stretch flex flex-col grow items-start min-h-px min-w-px relative rounded-[12px] shrink-0 hover:border-[#FDB913] transition-colors cursor-pointer")}
-                  >
-                    <div className={cn("content-stretch flex flex-col gap-[12px] items-start p-[16px] relative shrink-0 w-full")}>
-                      <div className={cn("content-stretch flex gap-[8px] items-center relative shrink-0 w-full")}>
-                        <div className="relative shrink-0 size-[40px]">
-                          <LightbulbIcon />
-                        </div>
-                        <p className={cn("font-cachet basis-0 font-medium grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
-                          {t('starterInnovationTitle')}
-                        </p>
-                      </div>
-                      <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full")}>
-                        {t('starterInnovationDesc')}
-                      </p>
+                {/* Card 4 - Innovation */}
+                <button
+                  type="button"
+                  onClick={() => handleStarterPromptClick('What innovations did the YMCA introduce throughout its history?')}
+                  className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-center p-[24px] relative rounded-[12px] hover:border-[#FDB913] transition-colors cursor-pointer h-full gap-[12px]")}
+                >
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full")}>
+                    <div className="relative shrink-0 size-[40px] text-[#FDB913]">
+                      <LightbulbIcon />
                     </div>
-                  </button>
-                </div>
+                    <p className={cn("font-cachet font-medium leading-[20px] not-italic relative shrink-0 text-[#231f20] text-[20px]")}>
+                      {t('starterInnovationTitle')}
+                    </p>
+                  </div>
+                  <p className={cn("font-normal leading-[1.5] not-italic relative shrink-0 text-[#636466] text-[16px] w-full text-center")}>
+                    {t('starterInnovationDesc')}
+                  </p>
+                </button>
               </div>
             </div>
           </div>

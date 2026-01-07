@@ -417,7 +417,7 @@ export default function ChatPage() {
 
   return (
     <div
-      className={cn("content-stretch flex flex-col items-start relative size-full min-h-screen bg-[#E1F4FA]")}
+      className={cn("content-stretch flex flex-col items-start relative size-full h-screen overflow-hidden bg-[#E1F4FA]")}
     >
       {/* Header */}
       <div className="content-stretch flex flex-col items-center justify-center px-[100px] py-0 relative shrink-0 w-full">
@@ -435,8 +435,8 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Messages Container */}
-      <div className="flex-1 content-stretch flex flex-col items-center relative shrink-0 w-full overflow-y-auto">
-        <div className="content-stretch flex flex-col gap-[40px] items-start max-w-[1240px] px-[24px] py-[64px] relative shrink-0 w-full">
+      <div className="flex-1 content-stretch flex flex-col items-center relative shrink-0 w-full overflow-y-auto mb-[40px]">
+        <div className="content-stretch flex flex-col gap-[40px] items-start max-w-[1240px] px-[24px] pt-[24px] pb-[24px] relative shrink-0 w-full">
 
           {/* Messages */}
           {conversation?.messages.map((message) => (
@@ -447,8 +447,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Chat Input - Fixed at bottom */}
-      <div className="content-stretch flex items-start relative shrink-0 w-full sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-[32px] pb-[24px]">
+      {/* Chat Input - Fixed at bottom of flex column */}
+      <div className="content-stretch flex items-start relative shrink-0 w-full bg-transparent pb-[24px]">
         <div className="content-stretch flex flex-col items-center max-w-[1240px] px-[24px] mx-auto w-full">
           <form onSubmit={handleSubmit} className="bg-white border border-[#d1d5dc] border-solid content-stretch flex gap-[8px] items-center justify-center pl-[24px] pr-[8px] py-[8px] relative rounded-[12px] shrink-0 w-full">
             <input

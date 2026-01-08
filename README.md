@@ -30,35 +30,32 @@ An intelligent document processing and multilingual chatbot system designed for 
 
 ## Features
 
-### 🌍 Multi-Language Support
+### Multi-Language Support
 - **12 Languages Supported**: English, Spanish, French, German, Italian, Portuguese, Chinese, Japanese, Korean, Arabic, Hindi, Russian
 - **Automatic Translation**: Amazon Translate provides seamless language detection and bidirectional translation
 - **Language Preservation**: Conversation context maintained across language switches
 
-### 🤖 Intelligent AI Chat
+### Intelligent AI Chat
 - **RAG-Powered Responses**: Bedrock Knowledge Base retrieves relevant context from uploaded documents
 - **Amazon Nova Pro**: Advanced AI model for generating contextual, citation-backed responses
 - **Streaming Support**: Real-time token-by-token response delivery for immediate feedback
 - **Source Citations**: Every response includes downloadable source documents with pre-signed URLs
 
-### 📄 Document Processing
+### Document Processing
 - **Automated Pipeline**: Step Functions orchestrates end-to-end document processing
 - **OCR Extraction**: Amazon Textract extracts text, tables, and forms from PDFs 
 - **Smart Indexing**: Bedrock Knowledge Base automatically indexes processed documents
 - **Multi-Format Support**: PDF, PNG, JPG, JPEG, TIFF files
 
-### 📊 Analytics & Admin Dashboard
+### Analytics & Admin Dashboard
 - **Conversation Tracking**: DynamoDB stores all chat interactions and metadata
 - **Usage Analytics**: Track queries, languages, popular topics, and response times
 - **Document Management**: Admin interface for uploading and managing knowledge base content
 - **Cognito Authentication**: Secure admin access with email/password authentication
 
-### ⚡ Performance & Scalability
-- **Serverless Architecture**: Auto-scales to handle varying workloads
-- **S3 Vectors**: Cost-effective vector storage (90% savings vs traditional solutions)
+### Performance & Scalability
+- **S3 Vectors**: Cost-effective vector storage
 - **Lambda Function URLs**: Native streaming support with 15-minute timeout
-- **Amplify CDN**: Global content delivery for the frontend
-
 ---
 
 ## High Level Architecture

@@ -6,7 +6,7 @@ An intelligent document processing and multilingual chatbot system designed for 
 
 ## Visual Demo
 
-![YMCA AI Architecture](./docs/media/arch.png)
+![YMCA AI Architecture](./docs/media/ymca_updated_demo_video.gif)
 
 > **Architecture Overview**: The system uses AWS serverless architecture with Step Functions orchestrating document processing, Textract for OCR, Bedrock Knowledge Base for RAG, and a Next.js frontend deployed via Amplify.
 
@@ -264,15 +264,7 @@ Extend and customize the YMCA AI Chatbot for your needs.
 
 ### Common Modifications
 
-**1. Change UI Theme**
-```typescript
-// frontend/app/globals.css
-@theme {
-  --color-ymca-blue: #0089d0;  // Update to your color
-}
-```
-
-**2. Add New Page**
+**1. Add New Page**
 ```typescript
 // frontend/app/about/page.tsx
 export default function AboutPage() {
@@ -280,7 +272,7 @@ export default function AboutPage() {
 }
 ```
 
-**3. Modify AI Prompts**
+**2. Modify AI Prompts**
 ```javascript
 // backend/lambda/agent-proxy/index.js
 function createEnhancedPrompt(context, query) {
@@ -288,21 +280,10 @@ function createEnhancedPrompt(context, query) {
 }
 ```
 
-**4. Switch Bedrock Models**
+**3. Switch Bedrock Models**
 ```javascript
 // backend/lambda/agent-proxy/index.js
 modelId: 'anthropic.claude-3-sonnet-20240229-v1:0'
-```
-
-**5. Add New Lambda Function**
-```typescript
-// backend/lib/backend-stack.ts
-const newFunction = new lambda.Function(this, 'NewFunction', {
-  runtime: lambda.Runtime.NODEJS_20_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset('lambda/new-function'),
-  // ...
-});
 ```
 
 **📚 For comprehensive modification examples, see the [Modification Guide](./docs/modificationGuide.md).**
@@ -314,148 +295,70 @@ const newFunction = new lambda.Function(this, 'NewFunction', {
 ```
 YMCA_Scono_chatbot/
 ├── backend/
-│   ├── bin/
-│   │   └── backend.ts              # CDK app entry point
+│   ├── bin/                          # CDK app entry point
 │   ├── lambda/
-│   │   ├── agent-proxy/            # RAG Lambda (chat functionality)
-│   │   ├── batch-processor/        # Document ingestion trigger
-│   │   ├── textract-async/         # Textract job starter
-│   │   ├── check-textract-status/  # Status checker
-│   │   └── textract-postprocessor/ # Result processor
-│   ├── lib/
-│   │   └── backend-stack.ts        # Main CDK stack
-│   ├── .env                        # Environment variables
-│   ├── cdk.json                    # CDK configuration
-│   ├── package.json                # Backend dependencies
-│   └── tsconfig.json               # TypeScript config
+│   │   ├── agent-proxy/              # RAG-powered chat with streaming
+│   │   ├── batch-processor/          # S3 upload event handler
+│   │   ├── textract-async/           # Textract job initiator
+│   │   ├── check-textract-status/    # Job status poller
+│   │   ├── textract-postprocessor/   # OCR result processor
+│   │   └── textract-multimodal-processor/  # Multimodal content handler
+│   ├── lib/                          # CDK stack definitions
+│   ├── test/                         # Unit tests
+│   ├── cdk.json                      # CDK configuration
+│   ├── package.json                  # Backend dependencies
+│   └── tsconfig.json                 # TypeScript config
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx                # Homepage
-│   │   ├── layout.tsx              # Root layout
-│   │   ├── globals.css             # Global styles
-│   │   ├── chat/
-│   │   │   └── page.tsx            # Chat interface
-│   │   ├── admin/
-│   │   │   └── page.tsx            # Admin dashboard
-│   │   ├── hooks/
-│   │   │   └── useChat.ts          # Chat hook
-│   │   └── context/
-│   │       └── ChatContext.tsx     # Chat context
-│   ├── lib/
-│   │   ├── api-service.ts          # API calls
-│   │   ├── i18n.ts                 # Internationalization
-│   │   └── utils.ts                # Utility functions
-│   ├── components/
-│   │   └── ConfigureAmplify.tsx    # Amplify configuration
-│   ├── public/                     # Static assets
-│   ├── .env.local                  # Frontend env vars (local dev only)
-│   ├── package.json                # Frontend dependencies
-│   └── next.config.js              # Next.js configuration
+│   │   ├── page.tsx                  # Homepage/welcome screen
+│   │   ├── layout.tsx                # Root layout
+│   │   ├── globals.css               # Global styles
+│   │   ├── admin/                    # Admin dashboard
+│   │   ├── chat/                     # Chat interface
+│   │   ├── components/               # Page-level components
+│   │   ├── context/                  # React context providers
+│   │   └── hooks/                    # Custom React hooks
+│   ├── components/                   # Shared/reusable components
+│   ├── lib/                          # API services, i18n, utilities
+│   ├── public/                       # Static assets
+│   ├── types/                        # TypeScript type definitions
+│   ├── next.config.js                # Next.js configuration
+│   └── package.json                  # Frontend dependencies
 ├── docs/
-│   ├── architectureDeepDive.md     # Detailed architecture explanation
-│   ├── deploymentGuide.md          # Complete deployment instructions
-│   ├── userGuide.md                # End-user documentation
-│   ├── APIDoc.md                   # API reference
-│   ├── modificationGuide.md        # Developer customization guide
-│   ├── streamingIntegration.md     # Streaming implementation details
-│   └── media/
-│       └── ymca_updated_arch.png   # Architecture diagram
-├── deploy.sh                       # Automated deployment script
-├── cleanup.sh                      # Resource cleanup script
-├── CLAUDE.md                       # Development guidelines
-├── LICENSE                         # MIT License
-└── README.md                       # This file
+│   ├── APIDoc.md                     # API reference
+│   ├── architectureDeepDive.md       # System architecture details
+│   ├── deploymentGuide.md            # Deployment instructions
+│   ├── modificationGuide.md          # Customization guide
+│   ├── streamingIntegration.md       # Streaming implementation
+│   ├── userGuide.md                  # End-user documentation
+│   └── media/                        # Diagrams and screenshots
+├── deploy.sh                         # Automated deployment script
+├── cleanup.sh                        # Resource cleanup script
+├── amplify.yml                       # Amplify build configuration
+├── claude.md                         # Development guidelines
+└── README.md                         # Project overview
 ```
 
-### Directory Explanations:
-
-**backend/** - Contains all backend infrastructure and serverless functions
-- `bin/` - CDK app entry point
-- `lambda/` - AWS Lambda function implementations
-  - `agent-proxy/` - RAG-powered chat handler with streaming support
-  - `batch-processor/` - Initiates document processing workflows on S3 upload
-  - `textract-async/` - Starts asynchronous OCR jobs
-  - `check-textract-status/` - Polls Textract job status
-  - `textract-postprocessor/` - Processes OCR results for knowledge base
-- `lib/` - CDK stack definitions (infrastructure as code)
-
-**frontend/** - Next.js 16 frontend application
-- `app/` - Next.js App Router pages and layouts
-- `lib/` - API services, internationalization, utilities
-- `components/` - Reusable React components
-- `public/` - Static assets (images, icons)
-
-**docs/** - Project documentation
-- Comprehensive guides for deployment, usage, API reference, and modification
-- `media/` - Architecture diagrams and screenshots
-
-**Root** - Deployment and configuration scripts
-- `deploy.sh` - Automated deployment orchestration
-- `cleanup.sh` - Resource cleanup with confirmation prompts
-- `CLAUDE.md` - Development best practices and coding guidelines
-
 ---
 
-## Additional Documentation
+## Additional Resources
 
-- **[Architecture Deep Dive](./docs/architectureDeepDive.md)** - Detailed system architecture, cloud services, security, and scalability
-- **[Deployment Guide](./docs/deploymentGuide.md)** - Step-by-step deployment instructions, prerequisites, and troubleshooting
-- **[User Guide](./docs/userGuide.md)** - End-user instructions, admin features, and FAQs
-- **[API Documentation](./docs/APIDoc.md)** - Complete API reference with request/response examples
-- **[Modification Guide](./docs/modificationGuide.md)** - Developer guide for extending and customizing the system
-- **[Streaming Integration](./docs/streamingIntegration.md)** - Technical details on streaming implementation
+**Documentation**: Comprehensive guides available in the `docs/` folder:
+- [Architecture Deep Dive](./docs/architectureDeepDive.md) - System design, AWS services, security
+- [Deployment Guide](./docs/deploymentGuide.md) - Setup instructions and troubleshooting
+- [User Guide](./docs/userGuide.md) - Admin features and usage examples
+- [API Documentation](./docs/APIDoc.md) - Endpoint reference with examples
+- [Modification Guide](./docs/modificationGuide.md) - Customization instructions
+- [Streaming Integration](./docs/streamingIntegration.md) - Real-time response implementation
 
----
+**Tech Stack**:
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4, AWS Amplify
+- **Backend**: AWS Lambda (Node.js 20.x), Amazon Bedrock (Nova Pro, Titan Embeddings V2), Textract, Translate, Step Functions, S3, DynamoDB, Cognito
+- **Infrastructure**: AWS CDK (TypeScript)
 
-## Technology Stack
+**Credits**: Developed by ASU Cloud Innovation Center ([Aarav Matalia](https://www.linkedin.com/in/aarav-matalia/), [Ashik Mathew Tharakan](https://www.linkedin.com/in/ashik-tharakan/)) in collaboration with YMCA of Snohomish County.
 
-### Frontend
-- **Next.js 16.0.1** - React framework with App Router
-- **React 19.2.0** - UI library
-- **TypeScript** - Type-safe development
-- **Tailwind CSS v4** - Utility-first styling
-- **AWS Amplify** - Hosting and CI/CD
-
-### Backend
-- **AWS CDK** - Infrastructure as Code
-- **AWS Lambda** - Serverless compute with Function URLs (Node.js 20.x)
-- **Amazon Bedrock** - AI/ML platform
-  - Amazon Nova Pro (chat model)
-  - Titan Text Embeddings V2 (embeddings)
-- **Amazon Textract** - Document OCR
-- **Amazon Translate** - Multi-language support
-- **AWS Step Functions** - Workflow orchestration
-- **Amazon S3** - Object storage
-  - S3 Vectors (vector embeddings)
-- **Amazon DynamoDB** - NoSQL database
-- **Amazon Cognito** - Authentication
-
----
-
-## Credits
-
-This application was developed by the Arizona State University Cloud Innovation Center (ASU CIC) team.
-
-**Contributors:**
-- Aarav Matalia: https://www.linkedin.com/in/aarav-matalia/
-- Ashik Mathew Tharakan: https://www.linkedin.com/in/ashik-tharakan/
-
-**Special Thanks:**
-- YMCA of Snohomish County for project collaboration
-- AWS for cloud infrastructure and AI services
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-## Support
-
-For questions:
-- **Documentation**: See the `docs/` folder for comprehensive guides
+**License**: MIT License - see [LICENSE](./LICENSE) file
 
 ---
 

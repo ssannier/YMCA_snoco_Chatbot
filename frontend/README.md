@@ -8,7 +8,7 @@ A Next.js 16 frontend application for the YMCA Historical Chatbot with real-time
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
 - **React**: 19.2.0
-- **Backend Integration**: AWS API Gateway + Lambda with streaming support
+- **Backend Integration**: AWS Lambda Function URLs with streaming support
 
 ## Architecture
 
@@ -61,7 +61,6 @@ cp .env.local.example .env.local
 Update `.env.local` with your AWS deployment outputs:
 
 ```env
-NEXT_PUBLIC_API_ENDPOINT=https://your-api-id.execute-api.us-west-2.amazonaws.com/prod
 NEXT_PUBLIC_STREAMING_ENDPOINT=https://your-function-url.lambda-url.us-west-2.on.aws/
 NEXT_PUBLIC_AWS_REGION=us-west-2
 ```
@@ -74,8 +73,7 @@ After deploying the backend with AWS CDK, you'll get these outputs:
 cd ../backend
 cdk deploy
 
-# Look for these outputs:
-# - ChatEndpoint: Your API Gateway endpoint
+# Look for this output:
 # - StreamingFunctionUrl: Your Lambda Function URL for streaming
 ```
 
@@ -257,9 +255,8 @@ amplify publish
 Backend Lambda functions are configured with CORS.
 If you see CORS errors:
 
-1. Verify API Gateway CORS settings
-2. Check Lambda Function URL CORS configuration
-3. Ensure requests include proper headers
+1. Check Lambda Function URL CORS configuration
+2. Ensure requests include proper headers
 
 ### Type Errors
 

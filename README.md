@@ -106,8 +106,7 @@ chmod +x deploy.sh
 The `deploy.sh` script automatically provisions:
 
 1. ✅ **Backend Infrastructure** (via AWS CDK)
-   - Lambda functions (chat, document processing)
-   - API Gateway with REST endpoints
+   - Lambda functions with Function URLs (chat, document processing)
    - Step Functions workflow
    - Bedrock Knowledge Base with S3 Vectors
    - DynamoDB tables (conversations, analytics)
@@ -141,7 +140,6 @@ The `deploy.sh` script automatically provisions:
 
 After successful deployment, you'll receive:
 - Frontend URL (Amplify App)
-- API Gateway endpoint
 - Streaming Function URL
 - Cognito User Pool IDs
 - S3 bucket names
@@ -420,14 +418,13 @@ YMCA_Scono_chatbot/
 
 ### Backend
 - **AWS CDK** - Infrastructure as Code
-- **AWS Lambda** - Serverless compute (Node.js 20.x)
+- **AWS Lambda** - Serverless compute with Function URLs (Node.js 20.x)
 - **Amazon Bedrock** - AI/ML platform
   - Amazon Nova Pro (chat model)
   - Titan Text Embeddings V2 (embeddings)
 - **Amazon Textract** - Document OCR
 - **Amazon Translate** - Multi-language support
 - **AWS Step Functions** - Workflow orchestration
-- **Amazon API Gateway** - REST API
 - **Amazon S3** - Object storage
   - S3 Vectors (vector embeddings)
 - **Amazon DynamoDB** - NoSQL database

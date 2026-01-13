@@ -294,7 +294,7 @@ print_header "Phase 5: Creating Cognito Admin User"
 
 if [ -n "$USER_POOL_ID" ] && [ "$USER_POOL_ID" != "None" ]; then
     print_status "Creating admin user: $ADMIN_EMAIL"
-    
+
     # Check if user already exists
     EXISTING_USER=$(aws cognito-idp list-users \
         --user-pool-id "$USER_POOL_ID" \
@@ -302,60 +302,83 @@ if [ -n "$USER_POOL_ID" ] && [ "$USER_POOL_ID" != "None" ]; then
         --region $AWS_REGION \
         --query 'Users[0].Username' \
         --output text 2>/dev/null || echo "None")
-    
+
     if [ "$EXISTING_USER" != "None" ] && [ -n "$EXISTING_USER" ]; then
         print_warning "User $ADMIN_EMAIL already exists (Username: $EXISTING_USER)"
-        print_status "Skipping user creation"
+        print_status "Updating password for existing user..."
+
+        # Set permanent password for existing user
+        aws cognito-idp admin-set-user-password \
+            --user-pool-id "$USER_POOL_ID" \
+            --username "$ADMIN_EMAIL" \
+            --password "$ADMIN_PASSWORD" \
+            --permanent \
+            --region $AWS_REGION > /dev/null 2>&1
+
+        if [ $? -eq 0 ]; then
+            print_success "Password updated successfully"
+        else
+            print_warning "Could not update password. Please reset it manually in AWS Console."
+        fi
     else
-        # Create temporary password for initial creation
+        # Create new user with permanent password (simpler approach)
+        print_status "Creating new admin user..."
+
+        # Create user with a temporary password first
         TEMP_PASSWORD="TempPass@$(date +%s)"
-        
+
         aws cognito-idp admin-create-user \
             --user-pool-id "$USER_POOL_ID" \
             --username "$ADMIN_EMAIL" \
             --user-attributes Name=email,Value="$ADMIN_EMAIL" Name=email_verified,Value=true \
             --temporary-password "$TEMP_PASSWORD" \
             --message-action SUPPRESS \
-            --region $AWS_REGION > /dev/null
-        
+            --region $AWS_REGION > /dev/null 2>&1
+
         if [ $? -eq 0 ]; then
             print_success "Admin user created"
-            
-            # Set permanent password
+
+            # Wait for user creation to propagate
             print_status "Setting permanent password..."
-            sleep 2  # Wait for user creation to propagate
-            
-            # Initiate auth to get session
-            AUTH_RESPONSE=$(aws cognito-idp admin-initiate-auth \
+            sleep 3
+
+            # Set permanent password directly (more reliable than auth flow)
+            aws cognito-idp admin-set-user-password \
                 --user-pool-id "$USER_POOL_ID" \
-                --client-id "$USER_POOL_CLIENT_ID" \
-                --auth-flow ADMIN_NO_SRP_AUTH \
-                --auth-parameters USERNAME="$ADMIN_EMAIL",PASSWORD="$TEMP_PASSWORD" \
-                --region $AWS_REGION 2>/dev/null || echo "")
-            
-            if [ -n "$AUTH_RESPONSE" ]; then
-                SESSION=$(echo "$AUTH_RESPONSE" | jq -r '.Session // empty')
-                
-                if [ -n "$SESSION" ]; then
-                    # Respond to NEW_PASSWORD_REQUIRED challenge
-                    aws cognito-idp admin-respond-to-auth-challenge \
-                        --user-pool-id "$USER_POOL_ID" \
-                        --client-id "$USER_POOL_CLIENT_ID" \
-                        --challenge-name NEW_PASSWORD_REQUIRED \
-                        --challenge-responses USERNAME="$ADMIN_EMAIL",NEW_PASSWORD="$ADMIN_PASSWORD" \
-                        --session "$SESSION" \
-                        --region $AWS_REGION > /dev/null 2>&1
-                    
-                    if [ $? -eq 0 ]; then
-                        print_success "Permanent password set successfully"
-                    else
-                        print_warning "Could not set permanent password automatically"
-                        print_status "User will need to change password on first login"
-                    fi
+                --username "$ADMIN_EMAIL" \
+                --password "$ADMIN_PASSWORD" \
+                --permanent \
+                --region $AWS_REGION > /dev/null 2>&1
+
+            if [ $? -eq 0 ]; then
+                print_success "Permanent password set successfully"
+
+                # Verify user status
+                USER_STATUS=$(aws cognito-idp admin-get-user \
+                    --user-pool-id "$USER_POOL_ID" \
+                    --username "$ADMIN_EMAIL" \
+                    --region $AWS_REGION \
+                    --query 'UserStatus' \
+                    --output text 2>/dev/null)
+
+                if [ "$USER_STATUS" = "CONFIRMED" ]; then
+                    print_success "User status: CONFIRMED - Ready to login!"
+                else
+                    print_warning "User status: $USER_STATUS"
                 fi
+            else
+                print_warning "Could not set permanent password automatically"
+                print_status "You can set it manually with:"
+                echo "  aws cognito-idp admin-set-user-password \\"
+                echo "    --user-pool-id $USER_POOL_ID \\"
+                echo "    --username $ADMIN_EMAIL \\"
+                echo "    --password YOUR_PASSWORD \\"
+                echo "    --permanent \\"
+                echo "    --region $AWS_REGION"
             fi
         else
             print_warning "Failed to create admin user"
+            print_status "You can create it manually in the AWS Cognito Console"
         fi
     fi
 else

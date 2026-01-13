@@ -7,9 +7,8 @@ This directory contains the AWS CDK infrastructure code for the YMCA AI multilin
 The YMCA AI system is built using a serverless architecture on AWS with the following key components:
 
 - **S3 Buckets**: Storage for raw documents, processed documents, and vector embeddings
-- **Lambda Functions**: Serverless compute for document processing and chat functionality
+- **Lambda Functions**: Serverless compute with Function URLs for document processing and chat functionality
 - **DynamoDB**: NoSQL database for conversation history and analytics
-- **API Gateway**: REST API endpoint for frontend communication
 - **KMS**: Encryption key management for data security
 - **IAM**: Least-privilege access control
 
@@ -84,7 +83,7 @@ The stack supports multiple environments through environment variables:
 ## Monitoring and Logging
 
 - CloudWatch Logs for all Lambda functions
-- API Gateway access logging
+- Lambda Function URL access logging
 - DynamoDB point-in-time recovery enabled
 - CloudWatch metrics and alarms (to be configured)
 
@@ -93,7 +92,7 @@ The stack supports multiple environments through environment variables:
 - Pay-per-request billing for DynamoDB
 - Serverless Lambda functions with appropriate memory allocation
 - S3 lifecycle policies for cost-effective storage
-- API Gateway throttling to prevent unexpected costs
+- Lambda concurrency limits to prevent unexpected costs
 
 ## Security Best Practices
 

@@ -2,7 +2,6 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
@@ -446,150 +445,6 @@ export class YmcaAiStack extends cdk.Stack {
       },
     });
 
-    // API Gateway for REST API
-    const api = new apigateway.RestApi(this, 'YmcaAiApi', {
-      restApiName: 'YMCA AI API',
-      description: 'API for YMCA AI multilingual chatbot system',
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-        allowHeaders: [
-          'Content-Type',
-          'X-Amz-Date',
-          'Authorization',
-          'X-Api-Key',
-          'X-Amz-Security-Token',
-        ],
-      },
-    });
-
-    // API Gateway integration with Lambda (non-streaming)
-    const chatIntegration = new apigateway.LambdaIntegration(agentProxyFunction);
-
-    // API routes
-    const chatResource = api.root.addResource('chat');
-    chatResource.addMethod('POST', chatIntegration);
-
-    // Streaming endpoint with response streaming enabled
-    const chatStreamResource = api.root.addResource('chat-stream');
-
-    // Use AwsIntegration for response streaming with the correct Lambda streaming API endpoint
-    const chatStreamIntegration = new apigateway.AwsIntegration({
-      service: 'lambda',
-      path: `2021-11-15/functions/${agentProxyStreamingFunction.functionArn}/response-stream-invocations`,
-      integrationHttpMethod: 'POST',
-      options: {
-        credentialsRole: new iam.Role(this, 'StreamingApiRole', {
-          assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
-          inlinePolicies: {
-            InvokeLambda: new iam.PolicyDocument({
-              statements: [
-                new iam.PolicyStatement({
-                  actions: ['lambda:InvokeFunction', 'lambda:InvokeWithResponseStream'],
-                  resources: [agentProxyStreamingFunction.functionArn],
-                }),
-              ],
-            }),
-          },
-        }),
-        passthroughBehavior: apigateway.PassthroughBehavior.WHEN_NO_MATCH,
-        integrationResponses: [
-          {
-            statusCode: '200',
-            responseParameters: {
-              'method.response.header.Content-Type': "'text/event-stream'",
-            },
-          },
-        ],
-      },
-    });
-
-    chatStreamResource.addMethod('POST', chatStreamIntegration, {
-      methodResponses: [
-        {
-          statusCode: '200',
-          responseParameters: {
-            'method.response.header.Content-Type': true,
-          },
-        },
-      ],
-    });
-
-    // Document upload endpoint
-    const uploadResource = api.root.addResource('upload', {
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: ['PUT', 'OPTIONS'],
-        allowHeaders: [
-          'Content-Type',
-          'X-Amz-Date',
-          'Authorization',
-          'X-Api-Key',
-          'X-Amz-Security-Token',
-        ],
-      },
-    });
-    const uploadIntegration = new apigateway.AwsIntegration({
-      service: 's3',
-      integrationHttpMethod: 'PUT',
-      path: `${documentsBucket.bucketName}/input/{key}`,
-      options: {
-        credentialsRole: new iam.Role(this, 'ApiGatewayS3Role', {
-          assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
-          inlinePolicies: {
-            S3PutPolicy: new iam.PolicyDocument({
-              statements: [
-                new iam.PolicyStatement({
-                  effect: iam.Effect.ALLOW,
-                  actions: ['s3:PutObject'],
-                  resources: [`${documentsBucket.bucketArn}/input/*`],
-                }),
-              ],
-            }),
-          },
-        }),
-        requestParameters: {
-          'integration.request.path.key': 'method.request.path.key',
-          'integration.request.header.Content-Type': 'method.request.header.Content-Type',
-        },
-        integrationResponses: [
-          {
-            statusCode: '200',
-            responseParameters: {
-              'method.response.header.Access-Control-Allow-Origin': "'*'",
-            },
-          },
-        ],
-      },
-    });
-
-    const keyResource = uploadResource.addResource('{key}', {
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: ['PUT', 'OPTIONS'],
-        allowHeaders: [
-          'Content-Type',
-          'X-Amz-Date',
-          'Authorization',
-          'X-Api-Key',
-          'X-Amz-Security-Token',
-        ],
-      },
-    });
-    keyResource.addMethod('PUT', uploadIntegration, {
-      requestParameters: {
-        'method.request.path.key': true,
-        'method.request.header.Content-Type': true,
-      },
-      methodResponses: [
-        {
-          statusCode: '200',
-          responseParameters: {
-            'method.response.header.Access-Control-Allow-Origin': true,
-          },
-        },
-      ],
-    });
 
     // Step Functions workflow for document processing pipeline
     const documentProcessingWorkflow = this.createDocumentProcessingWorkflow(
@@ -620,21 +475,6 @@ export class YmcaAiStack extends cdk.Stack {
     }));
 
     // Outputs for reference
-    new cdk.CfnOutput(this, 'ApiEndpoint', {
-      value: api.url,
-      description: 'YMCA AI API Gateway endpoint',
-    });
-
-    new cdk.CfnOutput(this, 'ChatEndpoint', {
-      value: `${api.url}chat`,
-      description: 'Non-streaming chat endpoint',
-    });
-
-    new cdk.CfnOutput(this, 'ChatStreamingEndpoint', {
-      value: `${api.url}chat-stream`,
-      description: 'Streaming chat endpoint with real-time response (API Gateway - may have limitations)',
-    });
-
     new cdk.CfnOutput(this, 'StreamingFunctionUrl', {
       value: streamingFunctionUrl.url,
       description: 'Lambda Function URL with native streaming support (recommended for streaming)',
@@ -727,7 +567,6 @@ export class YmcaAiStack extends cdk.Stack {
       });
 
       // Inject Environment Variables into Amplify
-      mainBranch.addEnvironment('NEXT_PUBLIC_API_ENDPOINT', `${api.url}chat`);
       mainBranch.addEnvironment('NEXT_PUBLIC_STREAMING_ENDPOINT', streamingFunctionUrl.url);
       mainBranch.addEnvironment('NEXT_PUBLIC_USER_POOL_ID', userPool.userPoolId);
       mainBranch.addEnvironment('NEXT_PUBLIC_USER_POOL_CLIENT_ID', userPoolClient.userPoolClientId);

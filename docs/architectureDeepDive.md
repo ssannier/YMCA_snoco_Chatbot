@@ -28,9 +28,9 @@ Users access the YMCA chatbot through a Next.js web application hosted on AWS Am
 
 ### 3. Chat Request Processing
 When a user sends a message:
-1. Frontend sends POST request to API Gateway (`/chat`) or Lambda Function URL (for streaming)
+1. Frontend sends POST request to Lambda Function URL with streaming enabled
 2. Request includes: user message, conversation ID, and target language
-3. API Gateway routes to appropriate Lambda function (streaming or non-streaming)
+3. Lambda Function URL directly invokes the streaming Lambda function
 
 ### 4. RAG (Retrieval-Augmented Generation) Pipeline
 The RAG Lambda function processes the request:
@@ -51,7 +51,7 @@ The RAG Lambda function processes the request:
 
 ### 5. Document Processing Pipeline
 When documents are uploaded to the admin panel:
-1. **Upload**: Files uploaded via frontend to API Gateway, stored in S3 bucket (`input/` prefix)
+1. **Upload**: Files uploaded directly from frontend to S3 using AWS SDK with Cognito credentials, stored in S3 bucket (`input/` prefix)
 2. **Ingestion Lambda**: S3 event notification triggers batch processor Lambda
 3. **Step Functions Workflow** orchestrates the processing:
    - **Textract Async**: Starts asynchronous Textract job (text detection for images, document analysis for PDFs)
@@ -87,16 +87,11 @@ When documents are uploaded to the admin panel:
   - Enables reproducible deployments across environments
   - Single command deployment (`cdk deploy`)
 
-- **Amazon API Gateway**: REST API gateway for backend access
-  - `/chat` endpoint for non-streaming requests
-  - `/chat-stream` endpoint for streaming via API Gateway (30-second timeout limit)
-  - `/upload/{key}` endpoint for direct S3 uploads
-  - CORS enabled for frontend access
-
-- **AWS Lambda**: Serverless compute for backend logic
-  - **RAG Lambda (`ymca-agent-proxy`)**: Handles non-streaming chat requests (15-min timeout, 1024MB memory)
+- **AWS Lambda with Function URLs**: Serverless compute for backend logic with direct HTTPS endpoints
   - **RAG Streaming Lambda (`ymca-agent-proxy-streaming`)**: Handles streaming chat with response streaming enabled (15-min timeout, 1024MB memory)
-    - Lambda Function URL with native streaming support (recommended)
+    - Lambda Function URL with native streaming support (RESPONSE_STREAM invoke mode)
+    - CORS configured for frontend access
+    - No API Gateway overhead - direct invocation
   - **Batch Processor (`ymca-batch-processor`)**: Triggers document processing workflow on S3 upload (5-min timeout, 512MB memory)
   - **Textract Async (`ymca-textract-async`)**: Starts asynchronous Textract jobs (5-min timeout, 512MB memory)
   - **Check Textract Status (`ymca-check-textract-status`)**: Polls Textract job status (5-min timeout, 256MB memory)
@@ -196,11 +191,11 @@ backend/
 
 1. **S3 Buckets**: `s3.Bucket` with encryption, block public access, and retention policies
 2. **S3 Vectors**: Custom construct from `cdk-s3-vectors` library for vector storage and indexing
-3. **Lambda Functions**: `lambda.Function` with environment variables, IAM roles, and timeouts
-4. **API Gateway**: `apigateway.RestApi` with CORS, Lambda integrations, and S3 proxy for uploads
+3. **Lambda Functions**: `lambda.Function` with Function URLs, environment variables, IAM roles, and timeouts
+4. **Lambda Function URLs**: Direct HTTPS endpoints with CORS, streaming support (RESPONSE_STREAM invoke mode)
 5. **DynamoDB Tables**: `dynamodb.Table` with on-demand billing and global secondary indexes
 6. **Step Functions**: `stepfunctions.StateMachine` with Lambda task integrations and choice states
-7. **Cognito**: `cognito.UserPool`, `cognito.CfnIdentityPool` for authentication
+7. **Cognito**: `cognito.UserPool`, `cognito.CfnIdentityPool` for authentication and S3 direct access
 8. **Bedrock**: `CfnKnowledgeBase`, `CfnDataSource` for RAG capabilities
 9. **Amplify**: `amplifyAlpha.App` for frontend hosting with GitHub integration
 10. **IAM Roles & Policies**: Fine-grained permissions for each Lambda function and service
@@ -227,8 +222,8 @@ The `deploy.sh` script automates the entire deployment process:
 
 ### Authorization
 - **IAM Roles**: Least-privilege access for Lambda functions and services
-- **Cognito Identity Pool**: Temporary AWS credentials with scoped permissions
-- **API Gateway**: Can add API keys or Cognito authorizers (currently open for chat endpoint)
+- **Cognito Identity Pool**: Temporary AWS credentials with scoped permissions for direct S3 uploads
+- **Lambda Function URLs**: Public HTTPS endpoints with CORS for chat functionality
 
 ### Data Encryption
 - **At Rest**:
@@ -236,8 +231,8 @@ The `deploy.sh` script automates the entire deployment process:
   - DynamoDB uses AWS-managed encryption
 - **In Transit**:
   - Enforce SSL/TLS for all S3 operations (`enforceSSL: true`)
-  - API Gateway uses HTTPS endpoints
-  - Lambda Function URLs use HTTPS
+  - Lambda Function URLs use HTTPS endpoints
+  - All API communication over TLS 1.2+
 
 ### Network Security
 - **S3 Bucket Policies**: Block all public access
@@ -256,20 +251,20 @@ The `deploy.sh` script automates the entire deployment process:
 
 ### Auto-scaling
 - **Lambda Functions**: Automatically scale to handle concurrent requests (default: 1000 concurrent executions per region)
+- **Lambda Function URLs**: No additional scaling limits beyond Lambda concurrency
 - **DynamoDB**: On-demand billing mode automatically scales throughput
 - **S3**: Infinitely scalable for storage and requests
-- **API Gateway**: Handles up to 10,000 requests per second (can request limit increase)
 
 ### Load Balancing
-- **API Gateway**: Built-in load balancing across Lambda invocations
+- **Lambda Function URLs**: Direct invocation with AWS-managed load distribution
 - **Bedrock**: Managed service with automatic scaling for inference
 - **S3 Vectors**: Distributed index for fast vector search at scale
 
 ### Caching
-- **API Gateway Caching**: Can be enabled for frequently requested endpoints
 - **S3 Pre-signed URLs**: 5-minute cache for document access
 - **Frontend**: Next.js static export with edge caching via Amplify CDN
 - **Bedrock Knowledge Base**: Caches embeddings in S3 Vectors index
+- **Lambda Warm-up**: Reduced cold starts with provisioned concurrency (optional)
 
 ### Performance Optimizations
 - **Diversity Enforcement**: Limits chunks per document to reduce token usage

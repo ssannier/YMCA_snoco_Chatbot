@@ -20,26 +20,25 @@ The YMCA AI Chatbot provides RESTful APIs for conversational AI with multilingua
 ## Base URL
 
 ```
-https://[API_ID].execute-api.[REGION].amazonaws.com/prod/
+https://[FUNCTION_ID].lambda-url.[REGION].on.aws/
 ```
 
-> **Note**: Replace with your actual API Gateway endpoint after deployment. Find this in CDK outputs as `ApiEndpoint`.
+> **Note**: Replace with your actual Lambda Function URL after deployment. Find this in CDK outputs as `StreamingFunctionUrl`.
 
 **Example**:
 ```
-https://abc123def456.execute-api.us-west-2.amazonaws.com/prod/
+https://xyz789abc123.lambda-url.us-west-2.on.aws/
 ```
 
 ---
 
 ## Authentication
 
-**Current**: The chat endpoints are currently public (no authentication required).
+**Current**: The chat endpoint is currently public (no authentication required for chat).
 
-**Optional**: You can add authentication by:
-- Enabling API Keys in API Gateway
-- Adding Cognito Authorizer for the chat endpoint
-- Implementing custom Lambda authorizer
+**Admin Features**: Document uploads require Cognito authentication:
+- Users authenticate via Cognito User Pool to get temporary AWS credentials
+- Credentials used for direct S3 uploads via AWS SDK
 
 ### Headers Required
 
@@ -55,17 +54,17 @@ https://abc123def456.execute-api.us-west-2.amazonaws.com/prod/
 
 ---
 
-## 1) Chat Endpoints
+## 1) Chat Endpoint
 
-The chat endpoints provide conversational AI capabilities with RAG-powered responses.
+The chat endpoint provides conversational AI capabilities with RAG-powered responses and real-time streaming.
 
 ---
 
-### POST /chat — Non-Streaming Chat
+### POST / — Streaming Chat (Lambda Function URL)
 
-- **Purpose**: Send a chat message and receive a complete response
+- **Purpose**: Send a chat message and receive a streaming response with native Lambda streaming support
 
-- **Endpoint**: `POST /chat`
+- **Endpoint**: `POST /` (Lambda Function URL root)
 
 - **Request body**:
 ```json
@@ -87,130 +86,8 @@ The chat endpoints provide conversational AI capabilities with RAG-powered respo
 }
 ```
 
-- **Response**:
-```json
-{
-  "response": {
-    "story": {
-      "title": "string - Response title",
-      "narrative": "string - Main response content",
-      "timeline": "string - Historical timeline information",
-      "locations": "string - Relevant locations",
-      "keyPeople": "string - Important people mentioned",
-      "whyItMatters": "string - Significance of the information"
-    },
-    "lessonsAndThemes": ["string - Array of key themes"],
-    "modernReflection": "string - Modern context and relevance",
-    "exploreFurther": ["string - Array of suggested follow-up questions"],
-    "citedSources": [
-      {
-        "id": "number - Source ID",
-        "title": "string - Source document title",
-        "excerpt": "string - Brief excerpt from source"
-      }
-    ]
-  },
-  "responseType": "string - 'structured' or 'narrative' or 'error'",
-  "rawResponse": "string - Original AI response text",
-  "sources": [
-    {
-      "id": "number - Source ID",
-      "title": "string - Document title",
-      "source": "string - Source type (e.g., 'YMCA Historical Archives')",
-      "sourceUrl": "string - Pre-signed S3 URL for document (5-min expiration)",
-      "confidence": "number - Relevance score (0-1)",
-      "fullText": "string - Full text content from source",
-      "excerpt": "string - Short excerpt (first 300 chars)"
-    }
-  ],
-  "conversationId": "string - Conversation ID (returned or generated)",
-  "sessionId": "string - Session ID (returned or generated)",
-  "language": "string - Detected/used language code",
-  "processingTime": "number - Processing time in milliseconds",
-  "translationUsed": "boolean - Whether translation was used",
-  "timestamp": "string - ISO 8601 timestamp",
-  "metadata": {
-    "knowledgeBaseUsed": "boolean - Whether knowledge base was queried",
-    "citationsFound": "number - Number of citations found",
-    "responseStructured": "boolean - Whether response is structured JSON",
-    "fallbackUsed": "boolean - Whether fallback response was used"
-  }
-}
-```
-
-- **Example response**:
-```json
-{
-  "response": {
-    "story": {
-      "title": "YMCA's Service During World War II",
-      "narrative": "During World War II, the YMCA played a vital role in supporting both military personnel and their families...",
-      "timeline": "1941-1945",
-      "locations": "Military bases worldwide, USO centers, training camps",
-      "keyPeople": "YMCA volunteers, military chaplains, community organizers",
-      "whyItMatters": "The YMCA's wartime service established its role as a community anchor during national crises."
-    },
-    "lessonsAndThemes": [
-      "Community resilience during wartime",
-      "Supporting military families",
-      "Global humanitarian outreach"
-    ],
-    "modernReflection": "Today, the YMCA continues to support military families and veterans through specialized programs.",
-    "exploreFurther": [
-      "What programs did the YMCA offer at USO centers?",
-      "How did the YMCA support families on the home front?",
-      "Tell me about YMCA programs for veterans today"
-    ],
-    "citedSources": [
-      {
-        "id": 1,
-        "title": "YMCA_WWII_History.pdf",
-        "excerpt": "The YMCA operated hundreds of centers near military bases..."
-      }
-    ]
-  },
-  "responseType": "structured",
-  "sources": [
-    {
-      "id": 1,
-      "title": "YMCA_WWII_History.pdf",
-      "source": "YMCA Historical Archives",
-      "sourceUrl": "https://ymca-documents-123456-us-west-2.s3.us-west-2.amazonaws.com/input/YMCA_WWII_History.pdf?X-Amz-...",
-      "confidence": 0.92,
-      "excerpt": "The YMCA operated hundreds of centers near military bases providing recreation..."
-    }
-  ],
-  "conversationId": "conv-abc123",
-  "sessionId": "sess-xyz789",
-  "language": "en",
-  "processingTime": 3450,
-  "translationUsed": false,
-  "timestamp": "2025-01-07T12:34:56.789Z",
-  "metadata": {
-    "knowledgeBaseUsed": true,
-    "citationsFound": 3,
-    "responseStructured": true,
-    "fallbackUsed": false
-  }
-}
-```
-
-- **Status codes**:
-  - `200 OK` - Successful response with AI-generated content
-  - `400 Bad Request` - Missing required fields (message)
-  - `500 Internal Server Error` - Server error, returns error response structure
-
----
-
-### POST /chat-stream — Streaming Chat (API Gateway)
-
-- **Purpose**: Send a chat message and receive a streaming response
-
-- **Endpoint**: `POST /chat-stream`
-
-- **Request body**: Same as `/chat` endpoint
-
 - **Response**: Server-Sent Events (SSE) stream
+
 
 - **Stream Format**:
 ```
@@ -226,75 +103,112 @@ data: [DONE]
 ```
 
 - **Event Types**:
-  - `chunk`: Partial text content from AI
-  - `complete`: Final structured response with all metadata
+  - `chunk`: Partial text content from AI (streamed token-by-token)
+  - `complete`: Final structured response with all metadata and sources
+  - `error`: Error event if processing fails
   - `[DONE]`: End of stream marker
 
-- **Limitations**:
-  - API Gateway has 30-second timeout
-  - For long responses, use Lambda Function URL instead
-
----
-
-### Lambda Function URL — Streaming Chat (Recommended)
-
-- **Purpose**: Streaming chat with native Lambda response streaming (no timeout limits)
-
-- **Endpoint**: Available in CDK output as `StreamingFunctionUrl`
-
-- **Example**: `https://xyz789.lambda-url.us-west-2.on.aws/`
-
-- **Request**: Same as `/chat` endpoint (POST with JSON body)
-
-- **Response**: Same SSE format as `/chat-stream`
-
-- **Advantages**:
-  - 15-minute timeout (vs 30 seconds for API Gateway)
-  - Native Lambda streaming support
-  - Better performance for long responses
-  - No intermediary (direct Lambda invocation)
-
----
-
-## 2) Document Upload Endpoint
-
-### PUT /upload/{key} — Upload Document for Processing
-
-- **Purpose**: Upload documents (PDF, images) to the knowledge base for processing
-
-- **Endpoint**: `PUT /upload/{key}`
-
-- **Path parameters**:
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `key` | string | Filename for the uploaded document |
-
-- **Headers**:
-| Header | Description | Required |
-|--------|-------------|----------|
-| `Content-Type` | MIME type of the file (e.g., `application/pdf`, `image/png`) | Yes |
-
-- **Request body**: Binary file content
-
-- **Example request**:
-```bash
-curl -X PUT "https://[API_ID].execute-api.[REGION].amazonaws.com/prod/upload/ymca_history.pdf" \
-  -H "Content-Type: application/pdf" \
-  --data-binary "@ymca_history.pdf"
-```
-
-- **Response**:
+- **Complete Response Structure** (sent with `type: "complete"`):
 ```json
 {
-  "message": "File uploaded successfully",
-  "key": "ymca_history.pdf",
-  "bucket": "ymca-documents-{account}-{region}",
-  "location": "s3://ymca-documents-{account}-{region}/input/ymca_history.pdf"
+  "type": "complete",
+  "response": {
+    "response": {
+      "story": {
+        "title": "YMCA's Service During World War II",
+        "narrative": "During World War II, the YMCA played a vital role...",
+        "timeline": "1941-1945",
+        "locations": "Military bases worldwide, USO centers",
+        "keyPeople": "YMCA volunteers, military chaplains",
+        "whyItMatters": "The YMCA's wartime service established its role..."
+      },
+      "lessonsAndThemes": ["Community resilience", "Supporting military families"],
+      "modernReflection": "Today, the YMCA continues to support veterans...",
+      "exploreFurther": ["What programs did the YMCA offer at USO centers?"],
+      "citedSources": [{"id": 1, "title": "YMCA_WWII_History.pdf", "excerpt": "..."}]
+    },
+    "responseType": "structured",
+    "sources": [
+      {
+        "id": 1,
+        "title": "YMCA_WWII_History.pdf",
+        "source": "YMCA Historical Archives",
+        "sourceUrl": "https://ymca-documents-123.s3.amazonaws.com/...",
+        "confidence": 0.92,
+        "excerpt": "The YMCA operated hundreds of centers..."
+      }
+    ],
+    "conversationId": "conv-abc123",
+    "sessionId": "sess-xyz789",
+    "language": "en",
+    "processingTime": 3450,
+    "translationUsed": false,
+    "timestamp": "2025-01-13T12:34:56.789Z",
+    "metadata": {
+      "knowledgeBaseUsed": true,
+      "citationsFound": 3,
+      "responseStructured": true,
+      "fallbackUsed": false
+    }
+  }
 }
 ```
 
+- **Advantages of Lambda Function URL**:
+  - ✅ **15-minute timeout** (no 30-second limit)
+  - ✅ **Native Lambda streaming** (RESPONSE_STREAM invoke mode)
+  - ✅ **Better performance** - No API Gateway overhead
+  - ✅ **Direct invocation** - Lower latency
+  - ✅ **Cost-effective** - No API Gateway charges
+
+- **Status codes**:
+  - `200 OK` - Successful streaming response
+  - `400 Bad Request` - Missing required fields (message)
+  - `500 Internal Server Error` - Server error
+
+---
+
+## 2) Document Upload (Direct S3)
+
+### Direct S3 Upload — Upload Document for Processing
+
+- **Purpose**: Upload documents (PDF, images) to the knowledge base for processing
+
+- **Method**: Direct S3 upload using AWS SDK with Cognito credentials
+
+- **Authentication**:
+  - Users authenticate via Cognito User Pool
+  - Cognito Identity Pool provides temporary AWS credentials
+  - Credentials scoped to allow `s3:PutObject` on `input/` prefix only
+
+- **Frontend Implementation** (using AWS SDK v3):
+```typescript
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+// Get Cognito credentials
+const session = await fetchAuthSession();
+const credentials = session.credentials;
+
+// Create S3 client
+const s3Client = new S3Client({
+  region: 'us-west-2',
+  credentials: credentials,
+});
+
+// Upload file
+const command = new PutObjectCommand({
+  Bucket: process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET,
+  Key: `input/${fileName}`,
+  Body: fileBuffer,
+  ContentType: 'application/pdf',
+});
+
+await s3Client.send(command);
+```
+
 - **Processing Flow**:
-  1. File uploaded to S3 `input/` prefix
+  1. File uploaded directly to S3 `input/` prefix
   2. S3 event triggers batch processor Lambda
   3. Step Functions workflow starts
   4. Textract extracts text from document
@@ -305,11 +219,11 @@ curl -X PUT "https://[API_ID].execute-api.[REGION].amazonaws.com/prod/upload/ymc
   - **PDF**: `.pdf` (uses Textract document analysis)
   - **Images**: `.png`, `.jpg`, `.jpeg`, `.tiff`, `.tif` (uses Textract text detection)
 
-- **Status codes**:
-  - `200 OK` - File uploaded successfully
-  - `400 Bad Request` - Invalid file type or missing content
-  - `403 Forbidden` - Access denied
-  - `500 Internal Server Error` - Upload failed
+- **Advantages**:
+  - ✅ **Direct upload** - No Lambda/API Gateway intermediary
+  - ✅ **Large file support** - No size limits beyond S3 (5TB max)
+  - ✅ **Secure** - Scoped IAM permissions via Cognito
+  - ✅ **Cost-effective** - No API Gateway/Lambda charges for uploads
 
 ---
 
@@ -398,11 +312,10 @@ The API supports automatic translation for the following languages:
 **Current**: No rate limiting enforced
 
 **Recommended for Production**:
-- Enable API Gateway throttling:
-  - **Requests per second**: 1000 (default)
-  - **Burst limit**: 2000 (default)
-- Configure per-user or per-IP limits using API keys
+- Configure Lambda reserved concurrency to limit concurrent executions
+- Implement application-level rate limiting (e.g., by session ID or IP)
 - Monitor Lambda concurrent executions (default: 1000 per region)
+- Use AWS WAF for IP-based rate limiting if needed
 
 ---
 
@@ -410,28 +323,9 @@ The API supports automatic translation for the following languages:
 
 ### JavaScript/TypeScript (Frontend)
 
-#### Non-Streaming Chat
-```typescript
-const response = await fetch('https://[API_URL]/chat', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    message: 'What was the YMCA\'s role in World War II?',
-    conversationId: 'conv-123',
-    language: 'en'
-  })
-});
-
-const data = await response.json();
-console.log(data.response.story.narrative);
-console.log('Sources:', data.sources);
-```
-
 #### Streaming Chat
 ```typescript
-const response = await fetch('https://[STREAMING_URL]/', {
+const response = await fetch('https://[LAMBDA_FUNCTION_URL]/', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -477,33 +371,13 @@ while (true) {
 
 ### Python
 
-#### Non-Streaming Chat
-```python
-import requests
-import json
-
-response = requests.post(
-    'https://[API_URL]/chat',
-    headers={'Content-Type': 'application/json'},
-    json={
-        'message': 'What was the YMCA\'s role in World War II?',
-        'conversationId': 'conv-123',
-        'language': 'en'
-    }
-)
-
-data = response.json()
-print(data['response']['story']['narrative'])
-print('Sources:', data['sources'])
-```
-
 #### Streaming Chat
 ```python
 import requests
 import json
 
 response = requests.post(
-    'https://[STREAMING_URL]/',
+    'https://[LAMBDA_FUNCTION_URL]/',
     headers={'Content-Type': 'application/json'},
     json={
         'message': 'Tell me about YMCA history',
@@ -533,33 +407,15 @@ for line in response.iter_lines():
 
 ### cURL
 
-#### Non-Streaming Chat
-```bash
-curl -X POST 'https://[API_URL]/chat' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "message": "What was the YMCA'\''s role in World War II?",
-    "conversationId": "conv-123",
-    "language": "en"
-  }'
-```
-
 #### Streaming Chat
 ```bash
-curl -X POST 'https://[STREAMING_URL]/' \
+curl -X POST 'https://[LAMBDA_FUNCTION_URL]/' \
   -H 'Content-Type: application/json' \
   -d '{
     "message": "Tell me about YMCA history",
     "language": "en"
   }' \
   --no-buffer
-```
-
-#### Upload Document
-```bash
-curl -X PUT 'https://[API_URL]/upload/ymca_history.pdf' \
-  -H 'Content-Type: application/pdf' \
-  --data-binary '@ymca_history.pdf'
 ```
 
 ---

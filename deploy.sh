@@ -25,7 +25,6 @@ GITHUB_OWNER=""
 GITHUB_REPO=""
 ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
-API_ENDPOINT=""
 STREAMING_URL=""
 USER_POOL_ID=""
 USER_POOL_CLIENT_ID=""
@@ -255,8 +254,7 @@ print_status "Deploying stack: $STACK_NAME"
 print_status "This may take 10-15 minutes..."
 print_status "Components being deployed:"
 echo "  - S3 Vectors & Bedrock Knowledge Base"
-echo "  - Lambda functions (chat, streaming)"
-echo "  - API Gateway"
+echo "  - Lambda functions with Function URLs (streaming chat)"
 echo "  - DynamoDB tables"
 echo "  - Cognito User Pool"
 echo "  - Amplify App (connected to GitHub)"
@@ -280,7 +278,6 @@ fi
 
 print_status "Retrieving stack outputs..."
 
-API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' --output text --region $AWS_REGION)
 STREAMING_URL=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`StreamingFunctionUrl`].OutputValue' --output text --region $AWS_REGION)
 USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`UserPoolId`].OutputValue' --output text --region $AWS_REGION)
 USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==`UserPoolClientId`].OutputValue' --output text --region $AWS_REGION)
@@ -413,10 +410,8 @@ ${BLUE}Stack Details:${NC}
   AWS Region:           $AWS_REGION
   AWS Account:          $AWS_ACCOUNT_ID
 
-${BLUE}API Endpoints:${NC}
-  API Gateway:          $API_ENDPOINT
-  Chat Endpoint:        ${API_ENDPOINT}chat
-  Streaming Function:   $STREAMING_URL
+${BLUE}API Endpoint:${NC}
+  Streaming Function URL: $STREAMING_URL
 
 ${BLUE}Frontend:${NC}
   Frontend URL:         $AMPLIFY_URL
@@ -439,8 +434,7 @@ ${PURPLE}═══════════════════════�
 
   ✅ S3 Vectors infrastructure for embeddings
   ✅ Bedrock Knowledge Base with S3 data source
-  ✅ Lambda functions (chat, streaming, document processing)
-  ✅ API Gateway with CORS enabled
+  ✅ Lambda functions with Function URLs (streaming chat, document processing)
   ✅ DynamoDB tables (conversations, analytics)
   ✅ Cognito User Pool with admin user
   ✅ Step Functions for document processing pipeline

@@ -43,8 +43,7 @@ Before you deploy, you must have the following:
 ### Access Permissions
 - [ ] AWS IAM user/role with permissions for:
   - CloudFormation
-  - Lambda
-  - API Gateway
+  - Lambda (including Function URLs)
   - S3
   - DynamoDB
   - Cognito
@@ -145,7 +144,7 @@ For Amplify to deploy the frontend, you need:
 
 #### Backend Configuration
 
-The deployment script will prompt you for configuration, but you can optionally create a `.env` file in the `backend/` directory:
+The deployment script will prompt you for configuration and create a .env file automatically in the backend/ dir containing the following format
 
 ```bash
 # backend/.env
@@ -209,7 +208,9 @@ NEXT_PUBLIC_CONVERSATION_TABLE_NAME=ymca-conversations
 
 ### Automated Deployment (Recommended)
 
-The `deploy.sh` script automates the entire deployment process.
+The `deploy.sh` script automates the entire deployment process. 
+
+> **Important**: You need to navigate to the root directory where the deploy.sh file is located. 
 
 1. **Make the script executable**
    ```bash
@@ -244,8 +245,7 @@ The `deploy.sh` script automates the entire deployment process.
 5. **Save the outputs**
 
    When deployment completes, the script displays:
-   - API Gateway URL
-   - Streaming Function URL
+   - Streaming Function URL (Lambda Function URL)
    - Amplify App URL
    - Cognito User Pool IDs
    - S3 Bucket names
@@ -282,8 +282,7 @@ If you prefer to deploy manually:
 
    This will deploy:
    - S3 buckets (documents, vectors)
-   - Lambda functions (RAG, document processing)
-   - API Gateway
+   - Lambda functions with Function URLs (RAG streaming, document processing)
    - DynamoDB tables
    - Cognito User Pool and Identity Pool
    - Step Functions workflow
@@ -336,25 +335,26 @@ If you prefer to deploy manually:
 
    Expected status: `CREATE_COMPLETE` or `UPDATE_COMPLETE`
 
-2. **Test API endpoint**
+2. **Test Lambda Function URL endpoint**
    ```bash
-   # Get API endpoint from outputs
-   API_ENDPOINT=$(aws cloudformation describe-stacks \
+   # Get Lambda Function URL from outputs
+   STREAMING_URL=$(aws cloudformation describe-stacks \
      --stack-name YmcaAiStack \
-     --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+     --query 'Stacks[0].Outputs[?OutputKey==`StreamingFunctionUrl`].OutputValue' \
      --output text)
 
-   # Test the chat endpoint (requires uploading documents first for meaningful responses)
-   curl -X POST "${API_ENDPOINT}chat" \
+   # Test the streaming chat endpoint (requires uploading documents first for meaningful responses)
+   curl -X POST "${STREAMING_URL}" \
      -H "Content-Type: application/json" \
      -d '{
        "message": "Hello, what can you tell me about the YMCA?",
        "conversationId": "test-123",
        "language": "en"
-     }'
+     }' \
+     --no-buffer
    ```
 
-   Expected response: JSON with statusCode 200 and response text
+   Expected response: Server-Sent Events (SSE) stream with streaming text chunks
 
 3. **Check Lambda functions**
    ```bash
@@ -516,8 +516,7 @@ To remove all deployed resources:
    ```
 
    This will delete:
-   - Lambda functions
-   - API Gateway
+   - Lambda functions and Function URLs
    - Step Functions
    - Cognito User Pool and Identity Pool
    - Amplify App

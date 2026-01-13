@@ -302,7 +302,6 @@ YMCA_Scono_chatbot/
 │   │   ├── textract-async/           # Textract job initiator
 │   │   ├── check-textract-status/    # Job status poller
 │   │   ├── textract-postprocessor/   # OCR result processor
-│   │   └── textract-multimodal-processor/  # Multimodal content handler
 │   ├── lib/                          # CDK stack definitions
 │   ├── test/                         # Unit tests
 │   ├── cdk.json                      # CDK configuration

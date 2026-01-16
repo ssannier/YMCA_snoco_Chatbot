@@ -1,5 +1,5 @@
 const { BedrockAgentRuntimeClient, RetrieveCommand } = require('@aws-sdk/client-bedrock-agent-runtime');
-const { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } = require('@aws-sdk/client-bedrock-runtime');
+const { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand, InvokeModelCommand } = require('@aws-sdk/client-bedrock-runtime');
 const { TranslateClient, TranslateTextCommand } = require('@aws-sdk/client-translate');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
@@ -550,6 +550,54 @@ function createErrorResponse() {
   };
 }
 
+/**
+ * Pre-check using Nova Pro: Is this query about YMCA?
+ */
+async function checkIfYMCARelated(query) {
+  const prompt = `You are a filter that determines if questions are specifically about YMCA (Young Men's Christian Association).
+
+Answer YES only if the question is directly about YMCA's history, programs, facilities, people, or organizational activities.
+Answer NO if the question is about general topics, other organizations, or unrelated subjects.
+
+Examples:
+- "How did YMCA start?" → YES
+- "What YMCA programs exist for youth?" → YES
+- "How does money work?" → NO (general finance, not YMCA-specific)
+- "How does the Indian economy function?" → NO (world history, not YMCA)
+- "How to make desserts?" → NO (cooking, not YMCA)
+- "How do transistors work?" → NO (technology, not YMCA)
+
+Question: "${query}"
+
+Answer (YES or NO only):`;
+
+  try {
+    const command = new InvokeModelCommand({
+      modelId: 'us.amazon.nova-pro-v1:0',
+      body: JSON.stringify({
+        messages: [{
+          role: 'user',
+          content: [{ text: prompt }]
+        }],
+        inferenceConfig: {
+          maxTokens: 10,
+          temperature: 0
+        }
+      })
+    });
+
+    const response = await bedrockRuntimeClient.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    const answer = responseBody.output.message.content[0].text.trim().toUpperCase();
+
+    console.log('YMCA relevance check:', query, '→', answer);
+    return answer.includes('YES');
+  } catch (error) {
+    console.error('Pre-check failed, allowing query through:', error);
+    return true; // Fail open
+  }
+}
+
 // ============================================================================
 // MAIN REQUEST HANDLER
 // ============================================================================
@@ -594,34 +642,70 @@ async function processRequest(event, streamWriter = null) {
   // Step 1: Translate query to English
   const { queryInEnglish, originalLanguage } = await translateToEnglish(message, language);
 
-  // Step 2: Start categorization (async, non-blocking)
-  const categorizationPromise = categorizeQuery(queryInEnglish);
+  // Step 2: Pre-filter check - is this query about YMCA?
+  const isYMCARelated = await checkIfYMCARelated(queryInEnglish);
 
   let ragResponse;
   let citations = [];
+  let categorizationPromise;
 
-  try {
-    // Step 3: Retrieve context from Knowledge Base
-    const { citations: retrievedCitations, retrievedContext } = await retrieveKnowledgeBaseContext(queryInEnglish);
-    citations = retrievedCitations;
+  if (!isYMCARelated) {
+    console.log('Query rejected as unrelated to YMCA:', queryInEnglish);
 
-    // Step 4: Generate AI response
-    ragResponse = await generateAIResponse(retrievedContext, queryInEnglish, citations, streamWriter);
+    // Return rejection response immediately
+    const rejectionMessage = "I appreciate your question, but I'm specifically designed to help you explore YMCA history, programs, and community impact. I can't provide information about topics outside of the YMCA organization.\n\nI'd love to help you discover fascinating aspects of YMCA history instead! Try asking about:\n\n• How did the YMCA get started and who were its founders?\n• What role did the YMCA play during World War I and World War II?\n• How have YMCA youth programs evolved over the decades?\n\nWhat aspect of YMCA history interests you?";
 
-    console.log('RAG response generated successfully');
-    console.log('Citations processed:', citations.length);
-  } catch (error) {
-    console.error('RAG query failed:', error);
-    ragResponse = createErrorResponse();
+    ragResponse = {
+      type: 'narrative',
+      content: {
+        story: {
+          title: "I'm Here to Help with YMCA History",
+          narrative: rejectionMessage,
+          timeline: "N/A",
+          locations: "N/A",
+          keyPeople: "N/A",
+          whyItMatters: "Understanding YMCA's rich history helps us appreciate its lasting community impact."
+        },
+        lessonsAndThemes: ["I specialize in YMCA history and cannot address unrelated topics"],
+        modernReflection: "I'm here to help you explore the fascinating history of the YMCA organization.",
+        exploreFurther: [
+          "How did the YMCA get started?",
+          "Tell me about YMCA programs during a specific time period",
+          "What role did the YMCA play in community development?"
+        ]
+      },
+      rawText: rejectionMessage
+    };
+
+    citations = [];
+    categorizationPromise = Promise.resolve('Unrelated Query');
+  } else {
+    // Step 3: Start categorization (async, non-blocking)
+    categorizationPromise = categorizeQuery(queryInEnglish);
+
+    try {
+      // Step 4: Retrieve context from Knowledge Base
+      const { citations: retrievedCitations, retrievedContext } = await retrieveKnowledgeBaseContext(queryInEnglish);
+      citations = retrievedCitations;
+
+      // Step 5: Generate AI response
+      ragResponse = await generateAIResponse(retrievedContext, queryInEnglish, citations, streamWriter);
+
+      console.log('RAG response generated successfully');
+      console.log('Citations processed:', citations.length);
+    } catch (error) {
+      console.error('RAG query failed:', error);
+      ragResponse = createErrorResponse();
+    }
   }
 
   const ragEndTime = Date.now();
   const processingTime = ragEndTime - ragStartTime;
 
-  // Step 5: Translate response back to original language
+  // Step 6: Translate response back to original language
   const finalResponse = await translateResponse(ragResponse, originalLanguage);
 
-  // Step 6: Wait for categorization to complete
+  // Step 7: Wait for categorization to complete
   const category = await categorizationPromise;
 
   // Step 7: Store conversation and analytics
@@ -773,50 +857,7 @@ ${retrievedContext}
 
 USER QUESTION: ${queryInEnglish}
 
-=== TOPIC RELEVANCE AND CONTENT GUARDRAILS ===
-
-BEFORE responding, you MUST evaluate the user's question against these criteria:
-
-1. **TOPIC RELEVANCE CHECK** (PRIMARY FILTER):
-   - The query MUST be related to YMCA history, programs, community impact, organizational development, or historical events involving the YMCA.
-   - ACCEPTABLE topics include: YMCA founding and history, programs (youth, education, sports, health, wellness), community services, global impact, war efforts, social justice initiatives, facilities, leadership, organizational changes, historical events, modern YMCA operations.
-   - UNACCEPTABLE topics include: general history unrelated to YMCA, current events not involving YMCA, personal advice, technical support, entertainment, pop culture, other organizations, political opinions, general knowledge questions.
-
-   **If the query is NOT related to YMCA:** Respond with this JSON structure:
-   {
-     "story": {
-       "title": "I'm Here to Help with YMCA History",
-       "narrative": "I appreciate your question, but I'm specifically designed to discuss YMCA history, programs, and community impact. I can't provide information about topics outside of YMCA's organizational history and activities.\n\nI'd be happy to help you explore fascinating aspects of YMCA history instead! For example, I can tell you about:\n\n• The founding of the YMCA and its early pioneers\n• YMCA's role during wartime and major historical events\n• Evolution of youth and education programs\n• Community impact and social justice initiatives\n• Global expansion and international work\n• Modern YMCA programs and services\n\nWhat aspect of YMCA history would you like to learn about?",
-       "timeline": "N/A",
-       "locations": "N/A",
-       "keyPeople": "N/A",
-       "whyItMatters": "Understanding YMCA's rich history helps us appreciate its lasting community impact."
-     },
-     "lessonsAndThemes": ["I specialize in YMCA history and cannot address unrelated topics"],
-     "modernReflection": "I'm here to help you explore the fascinating history of the YMCA organization.",
-     "exploreFurther": [
-       "How did the YMCA get started?",
-       "Tell me about YMCA programs during a specific time period",
-       "What role did the YMCA play in community development?"
-     ],
-     "citedSources": []
-   }
-
-2. **CONTROVERSIAL/SENSITIVE TOPIC HANDLING**:
-   - If the query involves YMCA-related topics but requests highly opinionated, politically divisive, or inappropriate content, acknowledge the topic exists in YMCA history but respond with FACTUAL, BALANCED historical information only.
-   - Avoid taking strong political stances or expressing opinions on controversial current events.
-   - For sensitive historical topics (e.g., discrimination, segregation in YMCA history), present documented facts objectively and acknowledge the complexity.
-   - If no relevant archival context exists or the question asks for opinions rather than facts, politely redirect to factual historical discussions.
-
-   **Example approach for sensitive topics:**
-   - Question: "Was the YMCA racist?" → Respond with documented historical facts about segregation policies, integration efforts, and organizational evolution, citing specific sources.
-   - Question: "What's your opinion on [political topic]?" → Politely decline to offer opinions and redirect to historical facts.
-
-3. **INSUFFICIENT CONTEXT HANDLING**:
-   - If the retrieved context is empty or irrelevant (no valid sources), AND the query appears unrelated to YMCA, use the unrelated topic response above.
-   - If the query IS about YMCA but no sources were found, acknowledge this and suggest rephrasing or exploring related topics.
-
-=== PROCEED ONLY IF QUERY PASSES RELEVANCE CHECK ===
+IMPORTANT: You must ONLY answer questions about YMCA. If the question is not about YMCA (e.g., how bulbs work, Indian economy, cooking recipes, etc.), do NOT make up YMCA connections. Instead, respond with: "I appreciate your question, but I'm specifically designed to help you explore YMCA history, programs, and community impact. I can't provide information about topics outside of the YMCA organization."
 
 CRITICAL REQUIREMENTS FOR SOURCE SYNTHESIS:
 1. **MANDATORY MULTI-SOURCE USAGE**: You have ${numSources} sources available. You MUST reference and synthesize information from AT LEAST ${Math.min(3, numSources)} different sources in your response.

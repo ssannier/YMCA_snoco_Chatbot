@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import Image from 'next/image';
 import { cn } from '../lib/utils';
-import { useChat } from './hooks/useChat';
 import {
   ShieldIcon,
   SparklesIcon,
@@ -41,7 +40,6 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
-  const { sendMessage } = useChat();
 
   const submitMessage = () => {
     if (inputValue.trim()) {
@@ -49,9 +47,7 @@ export default function Home() {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pendingMessage', inputValue);
       }
-      // Send the message using the chat hook
-      sendMessage(inputValue);
-      // Navigate to chat page
+      // Navigate to chat page (chat page will handle sending)
       router.push('/chat');
       // Clear input
       setInputValue('');
@@ -68,9 +64,7 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('pendingMessage', prompt);
     }
-    // Send the message
-    sendMessage(prompt);
-    // Navigate to chat page
+    // Navigate to chat page (chat page will handle sending)
     router.push('/chat');
   };
 

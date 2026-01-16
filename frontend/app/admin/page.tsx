@@ -120,11 +120,16 @@ export default function AdminDashboard() {
         stats.languageBreakdown[lang] = (stats.languageBreakdown[lang] || 0) + 1;
       });
 
-      // Aggregate topic distribution by category
+      // Aggregate topic distribution by category (MULTI-CATEGORY SUPPORT)
       const categoryCounts: Record<string, number> = {};
       analytics.forEach((item) => {
-        const category = item.category || 'General/Other Questions';
-        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+        const categoryString = item.category || 'General/Other Questions';
+        // Split by " | " to handle multiple categories per query
+        const categories = categoryString.split(' | ').map((cat: string) => cat.trim());
+
+        categories.forEach((category: string) => {
+          categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+        });
       });
 
       const totalCategorized = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
@@ -328,31 +333,45 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-[12px] shadow-sm border border-[#d1d5dc] p-6">
                   <h2 className="text-xl font-bold text-[#231f20] mb-4">Recent Queries</h2>
                   <div className="space-y-4">
-                    {data.recentQueries.map((query, index) => (
-                      <div
-                        key={index}
-                        className="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1 mr-4">
-                            <p className="text-[#231f20] font-medium mb-1">{query.query}</p>
-                            {query.category && (
-                              <span className="inline-block bg-[#0089d0] bg-opacity-10 text-[#0089d0] text-xs px-2 py-1 rounded-full">
-                                {query.category}
-                              </span>
-                            )}
+                    {data.recentQueries.map((query, index) => {
+                      // Parse multiple categories if they exist
+                      const categories = query.category
+                        ? query.category.split(' | ').map(cat => cat.trim())
+                        : [];
+
+                      return (
+                        <div
+                          key={index}
+                          className="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1 mr-4">
+                              <p className="text-[#231f20] font-medium mb-2">{query.query}</p>
+                              {categories.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {categories.map((cat, catIndex) => (
+                                    <span
+                                      key={catIndex}
+                                      className="inline-block bg-[#0089d0] bg-opacity-10 text-[#0089d0] text-xs px-2 py-1 rounded-full"
+                                    >
+                                      {cat}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-xs text-[#636466] whitespace-nowrap">
+                              {new Date(query.timestamp).toLocaleString()}
+                            </span>
                           </div>
-                          <span className="text-xs text-[#636466] whitespace-nowrap">
-                            {new Date(query.timestamp).toLocaleString()}
-                          </span>
+                          <div className="flex gap-4 text-xs text-[#636466]">
+                            <span>Language: {query.language.toUpperCase()}</span>
+                            <span>Citations: {query.citations}</span>
+                            <span>Time: {query.processingTime}ms</span>
+                          </div>
                         </div>
-                        <div className="flex gap-4 text-xs text-[#636466]">
-                          <span>Language: {query.language.toUpperCase()}</span>
-                          <span>Citations: {query.citations}</span>
-                          <span>Time: {query.processingTime}ms</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </>

@@ -391,14 +391,21 @@ export default function ChatPage() {
   const { sendMessage, isLoading, conversation } = useChat();
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingMessageProcessedRef = useRef(false);
 
   // Check for pending message from home page
   useEffect(() => {
+    // Prevent duplicate processing (React StrictMode can cause double renders in dev)
+    if (pendingMessageProcessedRef.current) return;
+
     if (typeof window !== 'undefined') {
       const pendingMessage = sessionStorage.getItem('pendingMessage');
       if (pendingMessage) {
-        // Clear it immediately to prevent re-sending
+        // Mark as processed immediately
+        pendingMessageProcessedRef.current = true;
+        // Clear from sessionStorage
         sessionStorage.removeItem('pendingMessage');
+
         // Send the message if it's not already in the conversation
         const messageExists = conversation?.messages.some(
           msg => msg.role === 'user' && msg.content === pendingMessage

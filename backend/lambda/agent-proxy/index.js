@@ -33,6 +33,21 @@ const TOPIC_CATEGORIES = [
   'General/Other Questions'
 ];
 
+// Request deduplication cache (in-memory, Lambda-scoped)
+// Prevents duplicate requests within the same Lambda execution context
+const processedRequests = new Map();
+const DEDUP_WINDOW_MS = 10000; // 10 second deduplication window
+
+// Clean up old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of processedRequests.entries()) {
+    if (now - timestamp > DEDUP_WINDOW_MS) {
+      processedRequests.delete(key);
+    }
+  }
+}, 30000); // Clean up every 30 seconds
+
 // Supported languages for YMCA multilingual support
 const SUPPORTED_LANGUAGES = {
   'en': 'English',
@@ -370,21 +385,26 @@ async function translateResponse(ragResponse, originalLanguage) {
 }
 
 /**
- * Categorize query using Bedrock (async, non-blocking)
+ * Categorize query using Bedrock (async, non-blocking) - SUPPORTS MULTIPLE CATEGORIES
  */
 async function categorizeQuery(queryInEnglish) {
   try {
     const categorizationPrompt = `You are a topic categorization assistant for a YMCA historical chatbot.
 
-Your task is to categorize the following user query into ONE of these predefined categories:
+Your task is to categorize the following user query into ONE OR MORE of these predefined categories:
 
 ${TOPIC_CATEGORIES.map((cat, idx) => `${idx + 1}. ${cat}`).join('\n')}
 
 User Query: "${queryInEnglish}"
 
-Analyze the query and respond with ONLY the category name (exactly as listed above) that best matches the query's topic. Do not include any explanation or additional text.
+INSTRUCTIONS:
+- Analyze the query and select ALL categories that apply (minimum 1, maximum 3)
+- If the query touches multiple topics, list all relevant categories
+- Format: Return ONLY the category names separated by " | " (pipe symbol with spaces)
+- Example: "War Efforts & Historical Events | Social Justice & Equity"
+- If only one category applies, return just that category name
 
-Category:`;
+Categories:`;
 
     const categorizeCommand = new InvokeModelWithResponseStreamCommand({
       modelId: 'us.amazon.nova-pro-v1:0',
@@ -394,8 +414,8 @@ Category:`;
           content: [{ text: categorizationPrompt }]
         }],
         inferenceConfig: {
-          maxTokens: 100,
-          temperature: 0.1 // Low temperature for consistent categorization
+          maxTokens: 150,
+          temperature: 0.2 // Slightly higher for multi-category flexibility
         }
       })
     });
@@ -418,15 +438,31 @@ Category:`;
       }
     }
 
-    // Clean up the response and match to a valid category
-    const cleanedCategory = categoryText.trim();
-    const matchedCategory = TOPIC_CATEGORIES.find(cat =>
-      cleanedCategory.includes(cat) || cat.includes(cleanedCategory)
-    );
+    // Parse multiple categories separated by " | "
+    const cleanedResponse = categoryText.trim();
+    const potentialCategories = cleanedResponse.split('|').map(cat => cat.trim());
 
-    const finalCategory = matchedCategory || 'General/Other Questions';
-    console.log(`Query categorized as: ${finalCategory}`);
-    return finalCategory;
+    // Validate and match each category
+    const validCategories = [];
+    for (const potentialCat of potentialCategories) {
+      const matchedCategory = TOPIC_CATEGORIES.find(cat =>
+        potentialCat.includes(cat) || cat.includes(potentialCat) ||
+        potentialCat.toLowerCase() === cat.toLowerCase()
+      );
+      if (matchedCategory && !validCategories.includes(matchedCategory)) {
+        validCategories.push(matchedCategory);
+      }
+    }
+
+    // Default to General/Other if no valid categories found
+    const finalCategories = validCategories.length > 0
+      ? validCategories
+      : ['General/Other Questions'];
+
+    const categoriesString = finalCategories.join(' | ');
+    console.log(`Query categorized as: ${categoriesString}`);
+
+    return categoriesString; // Returns pipe-separated string for storage
   } catch (error) {
     console.warn('Query categorization failed:', error);
     return 'General/Other Questions'; // Default category on error
@@ -536,6 +572,21 @@ async function processRequest(event, streamWriter = null) {
   if (!message) {
     throw new Error('Message is required');
   }
+
+  // Request deduplication: Create a unique key for this request
+  const dedupKey = `${userId}:${sessionId}:${message.substring(0, 100)}`;
+  const now = Date.now();
+
+  if (processedRequests.has(dedupKey)) {
+    const lastProcessedTime = processedRequests.get(dedupKey);
+    if (now - lastProcessedTime < DEDUP_WINDOW_MS) {
+      console.log('Duplicate request detected within deduplication window, skipping:', dedupKey);
+      throw new Error('Duplicate request detected. Please wait before submitting the same query again.');
+    }
+  }
+
+  // Mark this request as being processed
+  processedRequests.set(dedupKey, now);
 
   const timestamp = Date.now();
   const ragStartTime = Date.now();

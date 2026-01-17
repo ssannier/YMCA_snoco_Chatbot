@@ -144,6 +144,11 @@ After successful deployment, you'll receive:
 - Cognito User Pool IDs
 - S3 bucket names
 
+Next Steps:
+- Identify the amplify url in the deployment script outputs
+- Visit the Amplify URL
+- To Sync the Knowledge Base, review the "Admin Features" section to see how to sync with the knowledge base and start using the application. See the [User Guide](./docs/userGuide.md)
+
 **📚 For detailed deployment instructions, see the [Deployment Guide](./docs/deploymentGuide.md).**
 
 ---

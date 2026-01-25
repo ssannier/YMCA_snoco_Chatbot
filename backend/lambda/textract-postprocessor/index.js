@@ -1,12 +1,14 @@
-const { 
-  TextractClient, 
-  GetDocumentTextDetectionCommand, 
-  GetDocumentAnalysisCommand 
+const {
+  TextractClient,
+  GetDocumentTextDetectionCommand,
+  GetDocumentAnalysisCommand
 } = require('@aws-sdk/client-textract');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { BedrockAgentClient, StartIngestionJobCommand } = require('@aws-sdk/client-bedrock-agent');
 
 const textractClient = new TextractClient({});
 const s3Client = new S3Client({});
+const bedrockAgentClient = new BedrockAgentClient({});
 
 /**
  * YMCA AI Textract Postprocessor Lambda Function
@@ -114,6 +116,18 @@ exports.handler = async (event) => {
     console.log(`Metadata file saved to: ${metadataKey}`);
     console.log(`Document metadata: ${JSON.stringify(bedrockMetadata.metadataAttributes)}`);
 
+    // Automatically sync Knowledge Base after document processing
+    let ingestionJobId = null;
+    try {
+      console.log('Triggering Knowledge Base sync...');
+      const ingestionResult = await syncKnowledgeBase();
+      ingestionJobId = ingestionResult.ingestionJobId;
+      console.log(`Knowledge Base sync started: ${ingestionJobId}`);
+    } catch (syncError) {
+      console.error('Failed to sync Knowledge Base (non-fatal):', syncError);
+      // Don't fail the whole process if KB sync fails
+    }
+
     return {
       statusCode: 200,
       message: 'Text extraction and processing completed successfully',
@@ -125,7 +139,8 @@ exports.handler = async (event) => {
       originalDocument: objectKey,
       structuredDataFound: processedContent.hasStructuredData,
       totalBlocks: allBlocks.length,
-      metadata: bedrockMetadata.metadataAttributes
+      metadata: bedrockMetadata.metadataAttributes,
+      knowledgeBaseSyncJobId: ingestionJobId
     };
   } catch (error) {
     console.error('Error processing Textract results:', error);
@@ -137,6 +152,31 @@ exports.handler = async (event) => {
     };
   }
 };
+
+/**
+ * Sync Knowledge Base by starting an ingestion job
+ */
+async function syncKnowledgeBase() {
+  const knowledgeBaseId = process.env.KNOWLEDGE_BASE_ID;
+  const dataSourceId = process.env.DATA_SOURCE_ID;
+
+  if (!knowledgeBaseId || !dataSourceId) {
+    console.warn('Knowledge Base ID or Data Source ID not configured, skipping sync');
+    return { ingestionJobId: null };
+  }
+
+  const command = new StartIngestionJobCommand({
+    knowledgeBaseId,
+    dataSourceId,
+    description: 'Auto-sync after document processing'
+  });
+
+  const result = await bedrockAgentClient.send(command);
+  return {
+    ingestionJobId: result.ingestionJob?.ingestionJobId,
+    status: result.ingestionJob?.status
+  };
+}
 
 /**
  * Get all Textract results with pagination support

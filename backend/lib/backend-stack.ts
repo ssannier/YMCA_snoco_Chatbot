@@ -238,6 +238,9 @@ export class YmcaAiStack extends cdk.Stack {
                 'bedrock:RetrieveAndGenerate',
                 'bedrock:ListKnowledgeBases',
                 'bedrock:GetKnowledgeBase',
+                'bedrock:StartIngestionJob',
+                'bedrock:GetDataSource',
+                'bedrock:ListDataSources',
               ],
               resources: [
                 `arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/*`,
@@ -345,6 +348,8 @@ export class YmcaAiStack extends cdk.Stack {
       environment: {
         DOCUMENTS_BUCKET: documentsBucket.bucketName,
         REGION: process.env.AWS_REGION || this.region,
+        KNOWLEDGE_BASE_ID: knowledgeBase.attrKnowledgeBaseId,
+        DATA_SOURCE_ID: dataSource.attrDataSourceId,
       },
     });
 

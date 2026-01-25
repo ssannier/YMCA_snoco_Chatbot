@@ -171,11 +171,11 @@ export default function Home() {
         <div className="basis-0 content-stretch flex flex-col grow items-center justify-between max-w-[1240px] min-h-px min-w-px px-[24px] py-[64px] relative shrink-0 w-full">
           <div className="content-stretch flex flex-col gap-[64px] items-center relative shrink-0 w-full">
             {/* Heading */}
-            <div className={cn("content-stretch flex flex-col gap-[16px] items-center not-italic relative shrink-0 text-center")}>
-              <h1 className={cn("font-cachet font-bold leading-normal min-w-full relative shrink-0 text-[#231f20] text-[64px] w-[min-content]")}>
+            <div className={cn("content-stretch flex flex-col gap-[16px] items-center not-italic relative shrink-0 text-center w-full")}>
+              <h1 className={cn("font-cachet font-bold leading-normal relative shrink-0 text-[#231f20] text-[40px] md:text-[64px] w-full max-w-[1000px] break-words")}>
                 {t('welcomeTitle')}
               </h1>
-              <p className={cn("font-normal leading-[1.5] relative shrink-0 text-[#484848] text-[20px] w-[800px] max-w-full")}>
+              <p className={cn("font-normal leading-[1.5] relative shrink-0 text-[#484848] text-[20px] w-full max-w-[800px]")}>
                 {t('welcomeSubtitle')}
               </p>
             </div>
@@ -189,7 +189,7 @@ export default function Home() {
                   onClick={() => handleStarterPromptClick(t('starterCrisisPrompt'))}
                   className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-start p-[24px] relative rounded-[12px] hover:border-[#EE3124] transition-colors cursor-pointer min-h-[160px] gap-[12px]")}
                 >
-                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[48px]")}>
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[56px]")}>
                     <div className="relative shrink-0 size-[40px] text-[#EE3124] flex-shrink-0">
                       <ShieldIcon />
                     </div>
@@ -208,7 +208,7 @@ export default function Home() {
                   onClick={() => handleStarterPromptClick(t('starterYouthPrompt'))}
                   className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-start p-[24px] relative rounded-[12px] hover:border-[#00AEEF] transition-colors cursor-pointer min-h-[160px] gap-[12px]")}
                 >
-                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[48px]")}>
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[56px]")}>
                     <div className="relative shrink-0 size-[40px] text-[#00AEEF] flex-shrink-0">
                       <SparklesIcon />
                     </div>
@@ -227,7 +227,7 @@ export default function Home() {
                   onClick={() => handleStarterPromptClick(t('starterLeadershipPrompt'))}
                   className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-start p-[24px] relative rounded-[12px] hover:border-[#92278F] transition-colors cursor-pointer min-h-[160px] gap-[12px]")}
                 >
-                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[48px]")}>
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[56px]")}>
                     <div className="relative shrink-0 size-[40px] text-[#92278F] flex-shrink-0">
                       <UsersIcon />
                     </div>
@@ -246,7 +246,7 @@ export default function Home() {
                   onClick={() => handleStarterPromptClick(t('starterInnovationPrompt'))}
                   className={cn("bg-white border border-[#d1d5dc] border-solid flex flex-col items-center justify-start p-[24px] relative rounded-[12px] hover:border-[#FDB913] transition-colors cursor-pointer min-h-[160px] gap-[12px]")}
                 >
-                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[48px]")}>
+                  <div className={cn("flex gap-[8px] items-center justify-center relative shrink-0 w-full min-h-[56px]")}>
                     <div className="relative shrink-0 size-[40px] text-[#FDB913] flex-shrink-0">
                       <LightbulbIcon />
                     </div>

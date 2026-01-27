@@ -148,7 +148,7 @@
     ],
     "env": {
       "FASTMCP_LOG_LEVEL": "ERROR",
-      "FIGMA_ACCESS_TOKEN": "figd_NduBbRM264McABAniEchW0mMZPWzYe-Lxpts96kE"
+      "FIGMA_ACCESS_TOKEN": ""
     },
     "disabled": false,
     "autoApprove": [

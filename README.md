@@ -3,7 +3,7 @@
 An intelligent document processing and multilingual chatbot system designed for YMCA organizations. This AI-powered solution processes historical documents, extracts knowledge, and provides multilingual chat support to help YMCA staff and members access information efficiently across language barriers.
 
 ---
-**Disclaimers**:
+## Disclaimers 
 
 Customers are responsible for making their own independent assessment of the information in this document.
 This document:
